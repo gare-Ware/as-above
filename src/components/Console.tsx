@@ -54,6 +54,10 @@ export function Console({
         id="console-panel"
         role="group"
         aria-label="Console"
+        // Closed, the panel is off-screen (desktop) or under the stage
+        // (mobile) — inert keeps its controls out of the tab order until
+        // the drawer actually opens.
+        inert={!open}
         initial={false}
         animate={{ y: isMobile ? 0 : open ? 0 : '112%' }}
         transition={PANEL_SPRING}

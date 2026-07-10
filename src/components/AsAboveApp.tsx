@@ -194,7 +194,8 @@ export function AsAboveApp() {
       ];
       if (live.current.inert) {
         // Reduced-motion / STILL path: the decode becomes a crossfade —
-        // function fully preserved, no boil, no dip.
+        // function fully preserved, no boil, no dip. 'settled' is raised
+        // only once the words are actually on the glass.
         st.decode = null;
         const wrap = tabletRefs.textWrap.current;
         const write = () => {
@@ -204,10 +205,12 @@ export function AsAboveApp() {
             st.lastText[i] = texts[i];
           });
           flipGrow(true);
+          setDecodePhase('settled');
         };
         if (!wrap) {
           write();
         } else {
+          setDecodePhase('decoding');
           wrap.style.transition = `opacity ${REDUCED_FADE_MS}ms ease`;
           wrap.style.opacity = '0';
           window.setTimeout(() => {
@@ -219,7 +222,6 @@ export function AsAboveApp() {
             }, REDUCED_FADE_MS + 40);
           }, REDUCED_FADE_MS);
         }
-        setDecodePhase('settled');
         return;
       }
       // The live decode: retarget mid-flight friendly — a fresh plan simply
