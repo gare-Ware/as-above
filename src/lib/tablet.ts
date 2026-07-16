@@ -107,7 +107,7 @@ export const TABLET = {
     pulse: {
       pool: 3, // simultaneous pulses (mash headroom)
       speedPerSec: 0.58, // full crossing ≈ 1.7s
-      maxOpacity: 0.5,
+      maxOpacity: 0.65,
       fromScale: 0.14,
       toScale: 1.2,
     },

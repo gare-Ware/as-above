@@ -34,6 +34,12 @@ await shot('04-decode-cascade');
 await page.waitForTimeout(600);
 await shot('05-decode-settled');
 
+// ── The pulse: catch the press ring mid-field ──
+await key.dispatchEvent('pointerdown');
+await key.dispatchEvent('pointerup');
+await page.waitForTimeout(500);
+await shot('05b-pulse-mid');
+
 // ── Mash: repeated presses mid-decode must stay liquid ──
 for (let i = 0; i < 3; i += 1) {
   await key.dispatchEvent('pointerdown');

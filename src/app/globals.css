@@ -26,7 +26,7 @@
   --halo: #ffd88a;
   --wave-root: #f0a844; /* innermost ring — the body's aura zone */
   --wave-edge: #472515; /* outermost ring = the page's base paint */
-  --pulse: #ffe3a1; /* the press pulse ring */
+  --pulse: #fff0ca; /* the press pulse ring — near-white so it reads over the field */
   --ink: #f8ecd4; /* wordmark, hints, chip text on the backdrop */
   --dune-1: #8f4d2a; /* far dune — redder than the field, so the earth reads */
   --dune-2: #6e381f;
@@ -154,7 +154,7 @@ body {
 .wave-pulse {
   fill: none;
   stroke: var(--pulse);
-  stroke-width: 3;
+  stroke-width: 4.5;
   opacity: 0;
   transition: stroke var(--theme-fade) ease;
 }
