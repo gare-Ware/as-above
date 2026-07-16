@@ -1,19 +1,22 @@
 # AS ABOVE
 
-A small, motion-saturated devotional scene. An earthen altar stands under the
-sky. Above it floats the Emerald Tablet — a slab of green phosphor glass in
-the tradition of a Mesopotamian retro-terminal. One thing hangs in the sky:
-the sun or the moon. One blood-red key sits in the thumb zone — **TRIGGER** —
-and pressing it scrambles the tablet's glyphs into a fun conspiracy fact
-about whatever is above.
+A small, motion-saturated devotional scene. One thing hangs in the sky — the
+sun or the moon — and its color radiates outward as a field of slow, organic
+waves that fill the whole viewport. Before it floats the Emerald Tablet: a
+cut gem of deep emerald whose pale-jade lettering is engraved into the
+stone. Below, a minimal dune horizon; in the thumb zone, one liquid-glass
+key — **TRIGGER** — and pressing it scrambles the tablet's glyphs into a fun
+conspiracy fact about whatever is above.
 
 *As above, so below* — the Emerald Tablet's own line. The SKY toggle
 literally chooses what is above.
 
-Everything on stage is always slightly in motion — the tablet levitates, the
-glow breathes, dust rises, the halo swells — and nothing ever lurches: every
-animation is interruptible mid-flight. Mash the key, flip the sky mid-swap;
-the scene stays liquid. The altar is the only still thing on stage.
+Everything breathes together: the tablet levitates and its sheen rides the
+tilt, wave crests travel outward forever, and a press sends one bright pulse
+racing through the field while the tablet takes the weight of its new words
+and their engraving surges with light. Nothing ever lurches — every motion
+is interruptible mid-flight. Mash the key, flip the sky mid-swap; the world
+stays liquid. The earth is the only still thing on stage.
 
 ## The corpus
 
@@ -39,14 +42,15 @@ npm run dev        # http://localhost:3000
 
 ## Controls
 
-- **The red key** (or **Enter** / **Space** anywhere, or tapping the tablet)
-  — the tablet answers.
-- **S** — flip the sky (sun ⇄ moon: body, palette, and corpus all swap).
+- **The glass key** (or **Enter** / **Space** anywhere, or tapping the
+  tablet) — the tablet answers.
+- **S** — flip the sky (sun ⇄ moon: body, wave palette, earth, and corpus
+  all swap).
 - **console** (chip, bottom right) — SKY · SUN/MOON, MOTION · LIVE/STILL,
   ORACLE · AUTO/OFF (left alone for ~45s, the tablet re-decodes on its own).
 
-Honors `prefers-reduced-motion`: ambient life goes still, the decode becomes
-a crossfade, the sky swap becomes a fade — nothing is lost but the physics.
+Honors `prefers-reduced-motion`: the field goes still, the decode becomes a
+crossfade, the sky swap becomes a fade — nothing is lost but the physics.
 
 ## Verify
 

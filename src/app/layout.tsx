@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { Cinzel, VT323 } from 'next/font/google';
+import { Cinzel, Cutive_Mono } from 'next/font/google';
 import './globals.css';
 
 // Display voice: Cinzel — carved Roman capitals, the lapidary voice. Used for
@@ -10,9 +10,12 @@ const displayFont = Cinzel({
   subsets: ['latin'],
 });
 
-// Phosphor/terminal voice: VT323 — a true CRT face (DEC VT320 lineage).
-// The tablet's text, console labels, hints, and reality tags all speak it.
-const terminalFont = VT323({
+// Tablet voice: Cutive Mono — a typewriter-serif monospace whose slab feet
+// read as chisel marks, so it engraves into the gem instead of glowing like
+// a terminal. Monospace is load-bearing: the decode boil depends on stable
+// word-wrap while characters churn. (v1 used VT323; the v2 redesign moved
+// the tablet from CRT to carved stone.) Keeps the --font-terminal hook name.
+const terminalFont = Cutive_Mono({
   variable: '--font-terminal',
   subsets: ['latin'],
   weight: '400',
@@ -25,7 +28,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#8f5e3a',
+  themeColor: '#472515',
 };
 
 export default function RootLayout({

@@ -1,11 +1,13 @@
 'use client';
 
-// The TRIGGER key — the app's one primary control: a single blood-red keycap
-// on a one-key slice of the terminal's bone keyboard. It is a trigger and
-// nothing else. Real key physics: press travels down fast and fires
-// IMMEDIATELY (pointerdown, never click); release settles on the stage's one
-// rationed bouncy spring. The global keyboard path (Enter/Space anywhere)
-// drives the same physics through the imperative handle.
+// The TRIGGER — the app's one primary control: a liquid-glass pill in the
+// thumb zone. It is a trigger and nothing else. The press is a major moment:
+// it fires IMMEDIATELY (pointerdown, never click), drops and squishes like
+// pressed liquid, blooms a refraction flash from the touch point, and — via
+// the orchestrator — launches a pulse ring through the wave field while the
+// tablet takes the weight. Release settles on the stage's one rationed
+// jelly-bounce. The global keyboard path (Enter/Space anywhere) drives the
+// same physics through the imperative handle.
 
 import {
   forwardRef,
@@ -24,31 +26,40 @@ export interface TriggerKeyHandle {
 
 export const TriggerKey = forwardRef<TriggerKeyHandle, { onFire: () => void }>(
   function TriggerKey({ onFire }, handle) {
-    const capRef = useRef<HTMLSpanElement>(null);
-    const plateRef = useRef<HTMLDivElement>(null);
+    const pillRef = useRef<HTMLButtonElement>(null);
+    const bloomRef = useRef<HTMLSpanElement>(null);
     const anim = useRef<ReturnType<typeof animate> | null>(null);
 
-    function press() {
-      const cap = capRef.current;
-      if (!cap) return;
+    function press(atX?: number, atY?: number) {
+      const pill = pillRef.current;
+      if (!pill) return;
       anim.current?.stop();
+      pill.dataset.pressed = 'true';
       anim.current = animate(
-        cap,
-        { transform: `translateY(${TABLET.key.travelPx}px)` },
+        pill,
+        { transform: `translateY(${TABLET.key.travelPx}px) scale(0.955, 0.9)` },
         { duration: TABLET.key.pressMs / 1000, ease: 'easeOut' },
       );
-      plateRef.current?.setAttribute('data-pressed', 'true');
+      const bloom = bloomRef.current;
+      if (bloom) {
+        pill.style.setProperty('--press-x', atX === undefined ? '50%' : `${atX}px`);
+        pill.style.setProperty('--press-y', atY === undefined ? '50%' : `${atY}px`);
+        bloom.dataset.bloom = 'false';
+        void bloom.offsetWidth; // restart the bloom animation
+        bloom.dataset.bloom = 'true';
+      }
     }
 
     function release() {
-      const cap = capRef.current;
-      if (!cap) return;
+      const pill = pillRef.current;
+      if (!pill) return;
       anim.current?.stop();
-      anim.current = animate(cap, { transform: 'translateY(0px)' }, KEY_RELEASE);
-      plateRef.current?.setAttribute('data-pressed', 'false');
+      pill.dataset.pressed = 'false';
+      // The one bounce on stage: glass settling like liquid.
+      anim.current = animate(pill, { transform: 'translateY(0px) scale(1, 1)' }, KEY_RELEASE);
     }
 
-    useImperativeHandle(handle, () => ({ press, release }));
+    useImperativeHandle(handle, () => ({ press: () => press(), release }));
 
     function onPointerDown(e: ReactPointerEvent<HTMLButtonElement>) {
       try {
@@ -56,38 +67,34 @@ export const TriggerKey = forwardRef<TriggerKeyHandle, { onFire: () => void }>(
       } catch {
         // Synthetic pointers (tests, capture scripts) have no live pointerId.
       }
-      press();
+      const rect = e.currentTarget.getBoundingClientRect();
+      const x = Math.min(Math.max(e.clientX - rect.left, 0), rect.width);
+      const y = Math.min(Math.max(e.clientY - rect.top, 0), rect.height);
+      press(x, y);
       onFire();
     }
 
     return (
-      <div ref={plateRef} className="key-plate" data-pressed="false">
-        <span className="key-neighbor key-neighbor-l" aria-hidden="true" />
-        <button
-          type="button"
-          className="key-trigger"
-          aria-label="Trigger — the tablet answers"
-          onPointerDown={onPointerDown}
-          onPointerUp={release}
-          onPointerCancel={release}
-          onPointerLeave={release}
-          onKeyDown={(e) => {
-            // The global handler owns Enter/Space so the physics can't
-            // double-fire; swallow the native button activation.
-            if (e.key === 'Enter' || e.key === ' ') e.preventDefault();
-          }}
-        >
-          <span ref={capRef} className="key-cap">
-            <span className="key-cap-glyph" aria-hidden="true">
-              ▲
-            </span>
-          </span>
-        </button>
-        <span className="key-neighbor key-neighbor-r" aria-hidden="true" />
-        <span className="key-label" aria-hidden="true">
-          trigger
-        </span>
-      </div>
+      <button
+        ref={pillRef}
+        type="button"
+        className="glass-pill"
+        data-pressed="false"
+        aria-label="Trigger — the tablet answers"
+        onPointerDown={onPointerDown}
+        onPointerUp={release}
+        onPointerCancel={release}
+        onPointerLeave={release}
+        onKeyDown={(e) => {
+          // The global handler owns Enter/Space so the physics can't
+          // double-fire; swallow the native button activation.
+          if (e.key === 'Enter' || e.key === ' ') e.preventDefault();
+        }}
+      >
+        <span className="pill-shine" aria-hidden="true" />
+        <span ref={bloomRef} className="pill-bloom" data-bloom="false" aria-hidden="true" />
+        <span className="pill-label">trigger</span>
+      </button>
     );
   },
 );

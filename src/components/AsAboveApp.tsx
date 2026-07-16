@@ -23,12 +23,13 @@ import {
   type OracleState,
 } from '@/lib/state';
 import { TABLET, floatPose, springStep, swapPose } from '@/lib/tablet';
-import { Altar } from './Altar';
 import { Console } from './Console';
+import { Dunes } from './Dunes';
 import { Dust } from './Dust';
-import { Sky, type SkyRefs } from './Sky';
+import { SKY_CENTER, Sky, type SkyRefs } from './Sky';
 import { Tablet, type TabletRefs } from './Tablet';
 import { TriggerKey, type TriggerKeyHandle } from './TriggerKey';
+import { Waves, type WavesRefs } from './Waves';
 
 type DecodePhase = 'idle' | 'decoding' | 'settled';
 
@@ -37,7 +38,11 @@ interface EngineState {
   last: number;
   swap: { x: number; v: number }; // 0=sun … 1=moon
   dip: { x: number; v: number };
+  /** ONE swell drives the gem's glow surge AND the wave amplitude — the
+      coherence spine: everything answers the same breath. */
   swell: number;
+  /** Pulse-ring progress per pool slot (≥1 = idle). */
+  pulses: number[];
   decode: { plan: ReturnType<typeof planDecode>; start: number } | null;
   lastText: [string, string, string];
   idleEpoch: number;
@@ -45,8 +50,9 @@ interface EngineState {
 
 const TAU = Math.PI * 2;
 const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
+const C = SKY_CENTER;
 const bodyTransform = (pose: { y: number; scale: number }) =>
-  `translate(110 ${110 + pose.y}) scale(${pose.scale}) translate(-110 -110)`;
+  `translate(${C} ${C + pose.y}) scale(${pose.scale}) translate(${-C} ${-C})`;
 
 export function AsAboveApp() {
   // ── State ──────────────────────────────────────────────────────────────────
@@ -77,12 +83,17 @@ export function AsAboveApp() {
     dip: useRef(null),
     aura: useRef(null),
     screen: useRef(null),
+    sheen: useRef(null),
     textWrap: useRef(null),
     claim: useRef(null),
     lore: useRef(null),
     filed: useRef(null),
   };
-  const shadowRef = useRef<SVGEllipseElement | null>(null);
+  const wavesRefs: WavesRefs = {
+    rings: useRef<(SVGPathElement | null)[]>([]),
+    pulses: useRef<(SVGCircleElement | null)[]>([]),
+    radii: useRef<number[]>([]),
+  };
   const keyHandle = useRef<TriggerKeyHandle | null>(null);
   const growAnim = useRef<ReturnType<typeof animate> | null>(null);
 
@@ -92,10 +103,18 @@ export function AsAboveApp() {
     swap: { x: 0, v: 0 },
     dip: { x: 0, v: 0 },
     swell: 0,
+    pulses: Array.from({ length: TABLET.waves.pulse.pool }, () => 1),
     decode: null,
     lastText: ['', '', ''],
     idleEpoch: 0,
   });
+
+  /** Launch a pulse ring through the wave field (the world answers). */
+  const firePulse = useCallback(() => {
+    const ps = eng.current.pulses;
+    const slot = ps.findIndex((p) => p >= 1);
+    ps[slot >= 0 ? slot : 0] = 0;
+  }, []);
 
   // Live mirrors for the loop (props/state read per frame without re-binding).
   const live = useRef({ inert: false, mode: 'sun' as BodyId });
@@ -227,15 +246,16 @@ export function AsAboveApp() {
       // The live decode: retarget mid-flight friendly — a fresh plan simply
       // adopts the boiling screen as its starting field.
       st.decode = { plan: planDecode(texts, decodeRng.current, TABLET.decode), start: performance.now() };
-      st.swell = 1; // glow swell
+      st.swell = 1; // the shared breath: gem glow AND wave amplitude
       st.dip.v += TABLET.dip.kickPxPerSec; // the tablet takes the weight
+      firePulse(); // the world answers
       writeDecodeFrame(performance.now()); // answer on THIS frame
       flipGrow(false);
       setDecodePhase('decoding');
     },
-    // Refs are stable containers; only the two callbacks matter.
+    // Refs are stable containers; only the callbacks matter.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [flipGrow, writeDecodeFrame],
+    [flipGrow, writeDecodeFrame, firePulse],
   );
 
   /** The sky swapped to a body that hasn't spoken: settle back to idle glyphs. */
@@ -293,10 +313,11 @@ export function AsAboveApp() {
     if (lastMode.current === oracle.mode) return;
     lastMode.current = oracle.mode;
     eng.current.dip.v += TABLET.dip.kickPxPerSec * 0.4;
+    if (!live.current.inert) firePulse(); // the sky announces itself
     const fact = currentFact(oracle);
     if (fact) beginDecode(fact);
     else beginIdle();
-  }, [oracle, beginDecode, beginIdle]);
+  }, [oracle, beginDecode, beginIdle, firePulse]);
 
   // ── The engine — one rAF loop, every frame, writes straight to refs ────────
   useEffect(() => {
@@ -401,12 +422,40 @@ export function AsAboveApp() {
         ).toFixed(3);
       }
 
-      // The hover shadow answers the bob (lower tablet → deeper, wider shadow).
-      const sh = shadowRef.current;
-      if (sh) {
-        const norm = Math.max(-1, Math.min(1, (f.y + st.dip.x) / 14));
-        sh.setAttribute('opacity', (TABLET.shadow.base + TABLET.shadow.depth * norm).toFixed(3));
-        sh.setAttribute('rx', (92 * (1 + 0.045 * norm)).toFixed(1));
+      // The gem's specular sheen rides the float tilt (the light above stays put).
+      const sheen = tabletRefs.sheen.current;
+      if (sheen) {
+        const slide = (f.rot / TABLET.float.tiltDeg || 0) * TABLET.sheen.travelPct;
+        sheen.style.transform = `translateX(${slide.toFixed(2)}%)`;
+      }
+
+      // The sea: a phase-lagged crest travels the rings outward forever; the
+      // decode's swell raises the whole field's amplitude for a breath.
+      const W = TABLET.waves;
+      const radii = wavesRefs.radii.current;
+      const crest = W.ampU * (1 + st.swell * W.swellAmpBoost);
+      for (let i = 0; i < radii.length; i += 1) {
+        const ring = wavesRefs.rings.current[i];
+        if (!ring) continue;
+        const s = L.inert
+          ? 1
+          : 1 + (crest / radii[i]) * Math.sin((TAU * t) / W.travelPeriodMs - i * W.phaseStepRad);
+        ring.setAttribute('transform', `scale(${s.toFixed(4)})`);
+      }
+      // Pulse rings: the press racing through the field.
+      for (let p = 0; p < st.pulses.length; p += 1) {
+        const el = wavesRefs.pulses.current[p];
+        if (!el) continue;
+        if (st.pulses[p] >= 1) {
+          if (el.getAttribute('opacity') !== '0') el.setAttribute('opacity', '0');
+          continue;
+        }
+        st.pulses[p] = Math.min(1, st.pulses[p] + dt * W.pulse.speedPerSec);
+        const q = st.pulses[p];
+        const easeOut = 1 - Math.pow(1 - q, 3);
+        const sc = W.pulse.fromScale + (W.pulse.toScale - W.pulse.fromScale) * easeOut;
+        el.setAttribute('transform', `scale(${sc.toFixed(4)})`);
+        el.setAttribute('opacity', ((1 - q) * W.pulse.maxOpacity).toFixed(3));
       }
 
       // The decode boils toward legibility.
@@ -415,7 +464,7 @@ export function AsAboveApp() {
 
     raf = requestAnimationFrame(step);
     return () => cancelAnimationFrame(raf);
-  }, [booted, writeDecodeFrame, skyRefs.sun, skyRefs.moon, skyRefs.sunHalo, skyRefs.moonHalo, skyRefs.drift, tabletRefs.drift, tabletRefs.dip, tabletRefs.aura]);
+  }, [booted, writeDecodeFrame, skyRefs.sun, skyRefs.moon, skyRefs.sunHalo, skyRefs.moonHalo, skyRefs.drift, tabletRefs.drift, tabletRefs.dip, tabletRefs.aura, tabletRefs.sheen, wavesRefs.rings, wavesRefs.pulses, wavesRefs.radii]);
 
   // ── Keyboard: Enter/Space fire from anywhere; S flips the sky ──────────────
   useEffect(() => {
@@ -507,14 +556,12 @@ export function AsAboveApp() {
         animate={{ y: consoleOpen && isMobile ? -PANEL_HEIGHT_MOBILE : 0 }}
         transition={PANEL_SPRING}
       >
-        <div className="backdrop-sun" aria-hidden="true" />
-        <div className="backdrop-moon" aria-hidden="true" />
+        <Waves seed={seed} refs={wavesRefs} />
         <div className="stage">
           <h1 className="wordmark">As Above</h1>
           <Sky refs={skyRefs} />
           <Dust seed={seed} />
-          <div className="ground" aria-hidden="true" />
-          <Altar seed={seed} shadowRef={shadowRef} />
+          <Dunes seed={seed} />
           <Tablet
             refs={tabletRefs}
             seed={seed}

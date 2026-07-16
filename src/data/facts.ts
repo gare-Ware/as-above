@@ -79,7 +79,7 @@ export const FACTS = [
     id: 'sun-teed',
     body: 'sun',
     claim: 'You live INSIDE the earth, and the sun is the appliance at the center.',
-    lore: "Cyrus Teed — physician, alchemist, and after a laboratory revelation, messiah — announced that the universe is a closed cell: we stand on the concave inner shell, and the entire cosmos hangs in the hollow, run by a central sun that is half light, half dark, rotating like a battery on a 24-year cycle. His followers surveyed a Florida beach with a purpose-built instrument and pronounced the earth's curve officially inward.",
+    lore: "Cyrus Teed — physician, alchemist, and after a laboratory revelation, messiah — announced the universe is a closed cell: we live on the concave inner shell, the cosmos hangs in the hollow, and the sun at the center is a half-light, half-dark battery on a 24-year cycle. His followers surveyed a Florida beach and pronounced the earth's curve officially inward.",
     filedUnder:
       'Cyrus Teed (Koresh), The Cellular Cosmogony, 1898. Status: the survey flattered its instrument; the commune is now a Florida state park.',
     tones: ['cult-cosmology', 'gilded-age'],

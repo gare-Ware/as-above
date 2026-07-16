@@ -12,17 +12,24 @@
 //             tilt) on incommensurate periods, like mass suspended in water
 //   dip     — the decode's suspension physics: the tablet "takes the weight"
 //             of the new words, sinks a few px, springs back (underdamped)
-//   glow    — the phosphor aura breathes on its own period; a decode adds a
+//   glow    — the gem's aura breathes on its own period; a decode adds a
 //             swell that decays exponentially
 //   sky     — the body drifts almost imperceptibly; its halo breathes on a
 //             different period per body; the swap is one continuous spring,
 //             reversible mid-flight with preserved velocity
-//   shadow  — the hover shadow on the altar answers the bob (sells the mass)
+//   waves   — the world: rings radiating from the body across the viewport.
+//             A phase-offset radial oscillation makes crests travel outward
+//             forever; the SAME swell that surges the gem's glow swells the
+//             wave amplitude, and every fire launches a pulse ring through
+//             the field — press, rays, and tablet answer as one gesture
+//   sheen   — the specular band on the gem slides with the float's tilt
 //
 // Ranking law: every ambient amplitude here is smaller AND slower than any
-// motion the user causes (dip max ≈ 13px vs bob 7px; swap 1.2s vs drift 30s).
-// TABLET.alive = false renders the scene inert (facts still deal) — the
-// one-line A/B kill-switch; the console's MOTION chip ANDs with it.
+// motion the user causes (dip max ≈ 13px vs bob 7px; swap 1.2s vs drift 30s;
+// wave crests drift for seconds, the press pulse crosses in ~1.7s). The
+// earth (dunes) is the one still anchor. TABLET.alive = false renders the
+// scene inert (facts still deal) — the one-line A/B kill-switch; the
+// console's MOTION chip ANDs with it.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { DECODE_DEFAULTS, type DecodeOpts } from './decode';
@@ -80,10 +87,36 @@ export const TABLET = {
     },
   },
 
-  /** Hover shadow on the altar (opacity swings opposite the bob). */
-  shadow: { base: 0.32, depth: 0.1 },
+  /**
+   * The wave field (SVG space: rings authored around the origin, radii in
+   * a 1200-unit square). Crest travel: ring i oscillates on a shared period
+   * with a per-ring phase lag — a radial phase gradient reads as waves
+   * radiating outward, with no respawn seam anywhere.
+   */
+  waves: {
+    ringCount: 9,
+    innerRadius: 150, // svg units — ring 0 (the body's aura zone)
+    outerRadius: 585, // ring N-1 ≈ the farthest corner (600u ↔ --wave-size/2)
+    wobbleBase: 9, // per-vertex organic wobble, svg units…
+    wobblePerRing: 2.6, // …growing slightly with radius
+    travelPeriodMs: 8800, // one crest cycle
+    phaseStepRad: 0.66, // per-ring lag — the outward travel
+    ampU: 11, // radial crest height, svg units (constant px ≈ real wave)
+    swellAmpBoost: 1.7, // the decode swell swells the sea too
+    /** The press pulse: a bright ring racing the field. */
+    pulse: {
+      pool: 3, // simultaneous pulses (mash headroom)
+      speedPerSec: 0.58, // full crossing ≈ 1.7s
+      maxOpacity: 0.5,
+      fromScale: 0.14,
+      toScale: 1.2,
+    },
+  },
 
-  /** The TRIGGER keycap — travel down fast, settle springy (the one bounce). */
+  /** The gem's specular band rides the float tilt (light stays celestial). */
+  sheen: { travelPct: 16 },
+
+  /** The TRIGGER glass pill — travel fast, settle liquid (the one bounce). */
   key: { travelPx: 4.5, pressMs: 45 },
 
   /** ORACLE — AUTO: the tablet re-decodes on its own after this much idle. */

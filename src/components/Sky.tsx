@@ -1,11 +1,11 @@
 'use client';
 
-// The body above — sun or moon, drawn in the line language: strokes and
-// simple geometry, never detailed imagery. Both bodies are always mounted,
-// sharing one center; the engine drives the eclipse-adjacent swap (the
-// leaving body sinks and recedes while the other rises through it) plus the
-// almost-imperceptible drift and the halo breathing. This component supplies
-// geometry only; every animated attribute is written by the engine via refs.
+// The body above — sun or moon as a FILLED disc now: the wave field is its
+// voice, so the body itself stays quiet and solid, with only a whisper of
+// surface detail. Both bodies share one center; the engine drives the
+// eclipse-adjacent swap (the leaving body sinks and recedes while the other
+// rises through it), the almost-imperceptible drift, and the halo breathing.
+// Geometry only — every animated attribute is written by the engine via refs.
 
 import type { RefObject } from 'react';
 
@@ -17,82 +17,78 @@ export interface SkyRefs {
   moonHalo: RefObject<SVGCircleElement | null>;
 }
 
-const C = 110; // shared center in the 220×220 box
-
-function sunRays() {
-  const rays: { x1: number; y1: number; x2: number; y2: number }[] = [];
-  for (let i = 0; i < 16; i += 1) {
-    const a = (i * Math.PI * 2) / 16 - Math.PI / 2;
-    const r1 = 66;
-    const r2 = i % 2 === 0 ? 82 : 74; // calibration ticks: long, short, long…
-    rays.push({
-      x1: C + r1 * Math.cos(a),
-      y1: C + r1 * Math.sin(a),
-      x2: C + r2 * Math.cos(a),
-      y2: C + r2 * Math.sin(a),
-    });
-  }
-  return rays;
-}
+/** Shared center of the 240×240 box — the engine's swap math pivots here. */
+export const SKY_CENTER = 120;
+const C = SKY_CENTER;
 
 export function Sky({ refs }: { refs: SkyRefs }) {
   return (
-    <svg className="sky" viewBox="0 0 220 220" aria-hidden="true">
+    <svg className="sky" viewBox="0 0 240 240" aria-hidden="true">
       <defs>
         <filter id="sky-blur" x="-60%" y="-60%" width="220%" height="220%">
-          <feGaussianBlur stdDeviation="14" />
+          <feGaussianBlur stdDeviation="15" />
         </filter>
       </defs>
       <g ref={refs.drift}>
-        {/* ── SUN: concentric rings + calibration-tick rays ── */}
+        {/* ── SUN: a solid gold disc with faint surface strokes ── */}
         <g ref={refs.sun}>
           <circle
             ref={refs.sunHalo}
             cx={C}
             cy={C}
-            r={64}
+            r={106}
             className="sky-halo"
             filter="url(#sky-blur)"
-            opacity={0.4}
+            opacity={0.42}
           />
-          <g className="sky-line" fill="none" strokeLinecap="round">
-            {sunRays().map((r, i) => (
-              <line key={i} x1={r.x1} y1={r.y1} x2={r.x2} y2={r.y2} strokeWidth={1.7} />
-            ))}
-            <circle cx={C} cy={C} r={56} strokeWidth={1.1} opacity={0.75} />
-            <circle cx={C} cy={C} r={44} strokeWidth={0.9} opacity={0.45} />
-            <circle cx={C} cy={C} r={30} strokeWidth={2.2} />
+          <circle cx={C} cy={C} r={88} className="sky-body" />
+          <g className="sky-detail" fill="none" strokeWidth={2.2} strokeLinecap="round" opacity={0.4}>
+            <path d={`M ${C - 52} ${C - 30} q 24 6 62 1 q 22 -3 40 2`} />
+            <path d={`M ${C - 64} ${C - 2} q 34 8 76 2 q 26 -4 50 3`} />
+            <path d={`M ${C - 58} ${C + 28} q 28 7 64 2 q 20 -3 44 2`} />
+            <path d={`M ${C - 40} ${C + 54} q 22 5 48 1 q 14 -2 30 2`} />
           </g>
-          <circle cx={C} cy={C} r={22} className="sky-fill" opacity={0.16} />
-          <circle cx={C} cy={C} r={2.6} className="sky-fill" />
+          <circle
+            cx={C}
+            cy={C}
+            r={88}
+            fill="none"
+            stroke="rgba(255, 244, 214, 0.4)"
+            strokeWidth={1.4}
+          />
         </g>
 
-        {/* ── MOON: stroked disc, terminator, crater arcs ── */}
+        {/* ── MOON: a silver-green disc, craters, a breath of terminator ── */}
         <g ref={refs.moon}>
           <circle
             ref={refs.moonHalo}
             cx={C}
             cy={C}
-            r={58}
+            r={100}
             className="sky-halo"
             filter="url(#sky-blur)"
-            opacity={0.35}
+            opacity={0.36}
           />
-          <g className="sky-line" fill="none" strokeLinecap="round">
-            <circle cx={C} cy={C} r={46} strokeWidth={2.2} />
-            {/* terminator — a gibbous line bowing through the disc */}
-            <path d={`M ${C} ${C - 45.2} A 19 45.2 0 0 0 ${C} ${C + 45.2}`} strokeWidth={1.2} opacity={0.7} />
-            {/* craters on the lit side */}
-            <circle cx={C + 14} cy={C - 15} r={7.5} strokeWidth={1} opacity={0.6} />
-            <circle cx={C + 24} cy={C + 9} r={4.5} strokeWidth={1} opacity={0.55} />
-            <circle cx={C + 8} cy={C + 24} r={3} strokeWidth={1} opacity={0.5} />
-            <path d={`M ${C + 28} ${C - 24} a 5 5 0 0 1 6 3`} strokeWidth={1} opacity={0.45} />
-            {/* three rim ticks — the moon is also an instrument */}
-            <line x1={C - 46} y1={C} x2={C - 52} y2={C} strokeWidth={1.2} opacity={0.5} />
-            <line x1={C} y1={C + 46} x2={C} y2={C + 52} strokeWidth={1.2} opacity={0.5} />
-            <line x1={C + 46} y1={C} x2={C + 52} y2={C} strokeWidth={1.2} opacity={0.5} />
+          <circle cx={C} cy={C} r={84} className="sky-body" />
+          <g className="sky-detail-fill" opacity={0.5}>
+            <circle cx={C + 26} cy={C - 22} r={10} />
+            <circle cx={C + 40} cy={C + 14} r={6} />
+            <circle cx={C + 12} cy={C + 38} r={4.5} />
+            <circle cx={C - 8} cy={C - 44} r={3.5} />
           </g>
-          <circle cx={C - 16} cy={C} r={30} className="sky-fill" opacity={0.08} />
+          {/* the shaded limb — a quiet crescent of depth */}
+          <path
+            d={`M ${C} ${C - 84} A 84 84 0 0 0 ${C} ${C + 84} A 30 84 0 0 1 ${C} ${C - 84} Z`}
+            fill="rgba(6, 22, 14, 0.14)"
+          />
+          <circle
+            cx={C}
+            cy={C}
+            r={84}
+            fill="none"
+            stroke="rgba(240, 252, 242, 0.35)"
+            strokeWidth={1.4}
+          />
         </g>
       </g>
     </svg>

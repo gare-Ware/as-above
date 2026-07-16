@@ -1,19 +1,22 @@
 'use client';
 
-// The Emerald Tablet — the hero. A rounded stone-edged slab whose face is a
-// phosphor screen in the tradition of the terminal photo: scanline texture,
-// glow bleed, glyph lines. At idle it shows drifting pseudo-glyphs (seeded
-// procedural marks, not a real script); on TRIGGER the engine scrambles them
-// into a fact. This component supplies structure and the idle script; the
-// one rAF loop (AsAboveApp) owns every animated attribute via these refs.
-// Channel discipline — one writer per element:
+// The Emerald Tablet — the hero. A cut gem now, not a panel: a chamfered,
+// seeded-irregular silhouette whose bevel band catches the sky, a deep
+// emerald face with light living inside it, and pale-jade lettering ENGRAVED
+// into the stone (a decode lifts the letters into luminescence — see
+// globals.css [data-decode='decoding']). At idle the face carries drifting
+// pseudo-glyphs (seeded marks, not a real script). This component supplies
+// structure and the idle script; the one rAF loop (AsAboveApp) owns every
+// animated attribute via these refs. Channel discipline — one writer per
+// element:
 //   .tablet-drift  — engine: levitation (bob + sway + tilt)
 //     .tablet-dip  — engine: decode suspension dip (spring)
-//       .tablet-aura   — engine: glow breathing + swell (opacity)
-//       .tablet-screen — Motion: FLIP height growth only
-//         text blocks  — engine: decode textContent
+//       .tablet-aura  — engine: glow breathing + swell (opacity)
+//       .tablet-face  — Motion: FLIP height growth only
+//         .tablet-sheen — engine: specular slide (rides the float tilt)
+//         text blocks   — engine: decode textContent
 
-import { useMemo, type RefObject } from 'react';
+import { useMemo, type CSSProperties, type RefObject } from 'react';
 import type { Fact } from '@/data/facts';
 import { seededRng } from '@/lib/rand';
 
@@ -22,6 +25,7 @@ export interface TabletRefs {
   dip: RefObject<HTMLDivElement | null>;
   aura: RefObject<HTMLDivElement | null>;
   screen: RefObject<HTMLDivElement | null>;
+  sheen: RefObject<HTMLDivElement | null>;
   textWrap: RefObject<HTMLDivElement | null>;
   claim: RefObject<HTMLParagraphElement | null>;
   lore: RefObject<HTMLParagraphElement | null>;
@@ -58,26 +62,59 @@ export function Tablet({
   refs: TabletRefs;
   seed: string;
   hasFact: boolean;
-  /** The settled fact — read by assistive tech, not by the boiling screen. */
+  /** The settled fact — read by assistive tech, not by the boiling face. */
   fact: Fact | null;
   /** The one line of first-load copy, retired after the first press. */
   showHint: boolean;
   onTap: () => void;
 }) {
-  const glyphs = useMemo(() => {
-    const rng = seededRng(`${seed}:glyphs`);
-    const rows: { d: string; cls: string; delay: number }[] = [];
+  const art = useMemo(() => {
+    const rng = seededRng(`${seed}:gem`);
+
+    // The cut: a chamfered octagon, each corner and edge slightly its own —
+    // a stone that was worked, not stamped. Same polygon clips gem and face
+    // (percentages adapt to each box).
+    const c = () => 5.5 + rng() * 4; // corner chamfer, %
+    const e = () => rng() * 0.9; // edge shy of true, %
+    const pts: [number, number][] = [
+      [c(), e()],
+      [100 - c(), e()],
+      [100 - e(), c()],
+      [100 - e(), 100 - c()],
+      [100 - c(), 100 - e()],
+      [c(), 100 - e()],
+      [e(), 100 - c()],
+      [e(), c()],
+    ];
+    const cut = pts.map((p) => `${p[0].toFixed(2)}% ${p[1].toFixed(2)}%`).join(', ');
+
+    // Light living inside the stone: two inclusion blobs, placed per session.
+    const inclusionA: CSSProperties = {
+      left: `${8 + rng() * 18}%`,
+      top: `${6 + rng() * 20}%`,
+      width: `${38 + rng() * 16}%`,
+      height: `${30 + rng() * 14}%`,
+    };
+    const inclusionB: CSSProperties = {
+      right: `${4 + rng() * 16}%`,
+      bottom: `${8 + rng() * 18}%`,
+      width: `${30 + rng() * 16}%`,
+      height: `${24 + rng() * 12}%`,
+    };
+
+    const glyphRng = seededRng(`${seed}:glyphs`);
+    const glyphs: { d: string; cls: string; delay: number }[] = [];
     for (let r = 0; r < 8; r += 1) {
-      for (let c = 0; c < 6; c += 1) {
-        if (rng() < 0.18) continue; // missing entries — the script breathes
-        rows.push({
-          d: glyphPath(rng, 14 + c * 42, 20 + r * 38),
-          cls: ['g-tw-a', 'g-tw-b', 'g-tw-c'][Math.floor(rng() * 3)],
-          delay: -rng() * 13,
+      for (let col = 0; col < 6; col += 1) {
+        if (glyphRng() < 0.18) continue; // missing entries — the script breathes
+        glyphs.push({
+          d: glyphPath(glyphRng, 14 + col * 42, 20 + r * 38),
+          cls: ['g-tw-a', 'g-tw-b', 'g-tw-c'][Math.floor(glyphRng() * 3)],
+          delay: -glyphRng() * 13,
         });
       }
     }
-    return rows;
+    return { cut, inclusionA, inclusionB, glyphs };
   }, [seed]);
 
   return (
@@ -92,8 +129,23 @@ export function Tablet({
               if (e.button === 0 || e.pointerType !== 'mouse') onTap();
             }}
           >
-            <div className="tablet-bezel">
-              <div ref={refs.screen} className="tablet-screen">
+            <div className="tablet-gem" style={{ clipPath: `polygon(${art.cut})` }}>
+              <div
+                ref={refs.screen}
+                className="tablet-face"
+                style={{ clipPath: `polygon(${art.cut})` }}
+              >
+                <span
+                  className="gem-inclusion gem-inclusion-a"
+                  style={art.inclusionA}
+                  aria-hidden="true"
+                />
+                <span
+                  className="gem-inclusion gem-inclusion-b"
+                  style={art.inclusionB}
+                  aria-hidden="true"
+                />
+                <div ref={refs.sheen} className="tablet-sheen" aria-hidden="true" />
                 <svg
                   className="tablet-glyphs"
                   viewBox="0 0 260 320"
@@ -101,8 +153,8 @@ export function Tablet({
                   data-visible={!hasFact}
                   aria-hidden="true"
                 >
-                  <g fill="none" strokeLinecap="round" strokeWidth={1.5}>
-                    {glyphs.map((g, i) => (
+                  <g fill="none" strokeLinecap="round" strokeWidth={1.6}>
+                    {art.glyphs.map((g, i) => (
                       <path
                         key={i}
                         d={g.d}
@@ -125,7 +177,6 @@ export function Tablet({
                 <p className="tablet-hint" data-visible={showHint && !hasFact}>
                   press the key — the tablet answers
                 </p>
-                <div className="tablet-scan" aria-hidden="true" />
               </div>
             </div>
           </div>
