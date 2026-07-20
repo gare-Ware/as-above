@@ -1,19 +1,19 @@
 'use client';
 
-// The Emerald Tablet — the hero. A cut gem now, not a panel: a chamfered,
-// seeded-irregular silhouette whose bevel band catches the sky, a deep
-// emerald face with light living inside it, and pale-jade lettering ENGRAVED
-// into the stone (a decode lifts the letters into luminescence — see
-// globals.css [data-decode='decoding']). At idle the face carries drifting
-// pseudo-glyphs (seeded marks, not a real script). This component supplies
-// structure and the idle script; the one rAF loop (AsAboveApp) owns every
-// animated attribute via these refs. Channel discipline — one writer per
-// element:
-//   .tablet-drift  — engine: levitation (bob + sway + tilt)
+// The Emerald Tablet — the hero. A river-worn slab of emerald: perfectly
+// symmetric, rounded (no hard edges anywhere on a major element), a bevel
+// crown catching the sky along its top, a deep emerald face with light
+// living inside it, and pale-jade lettering ENGRAVED into the stone (a
+// decode lifts the letters into luminescence — see globals.css
+// [data-decode='decoding']). At idle the face carries drifting pseudo-glyphs
+// (seeded marks, not a real script). This component supplies structure and
+// the idle script; the one rAF loop (AsAboveApp) owns every animated
+// attribute via these refs. Channel discipline — one writer per element:
+//   .tablet-drift  — engine: levitation (pure vertical bob — always plumb)
 //     .tablet-dip  — engine: decode suspension dip (spring)
 //       .tablet-aura  — engine: glow breathing + swell (opacity)
 //       .tablet-face  — Motion: FLIP height growth only
-//         .tablet-sheen — engine: specular slide (rides the float tilt)
+//         .tablet-sheen — engine: specular wander (its own slow period)
 //         text blocks   — engine: decode textContent
 
 import { useMemo, type CSSProperties, type RefObject } from 'react';
@@ -71,23 +71,9 @@ export function Tablet({
   const art = useMemo(() => {
     const rng = seededRng(`${seed}:gem`);
 
-    // The cut: a chamfered octagon, each corner and edge slightly its own —
-    // a stone that was worked, not stamped. Same polygon clips gem and face
-    // (percentages adapt to each box).
-    const c = () => 5.5 + rng() * 4; // corner chamfer, %
-    const e = () => rng() * 0.9; // edge shy of true, %
-    const pts: [number, number][] = [
-      [c(), e()],
-      [100 - c(), e()],
-      [100 - e(), c()],
-      [100 - e(), 100 - c()],
-      [100 - c(), 100 - e()],
-      [c(), 100 - e()],
-      [e(), 100 - c()],
-      [e(), c()],
-    ];
-    const cut = pts.map((p) => `${p[0].toFixed(2)}% ${p[1].toFixed(2)}%`).join(', ');
-
+    // The silhouette is pure CSS now (symmetric rounded slab + bevel crown —
+    // no seeded cut: the stone is polished, not chipped). What stays seeded
+    // is the light INSIDE it.
     // Light living inside the stone: two inclusion blobs, placed per session.
     const inclusionA: CSSProperties = {
       left: `${8 + rng() * 18}%`,
@@ -114,7 +100,7 @@ export function Tablet({
         });
       }
     }
-    return { cut, inclusionA, inclusionB, glyphs };
+    return { inclusionA, inclusionB, glyphs };
   }, [seed]);
 
   return (
@@ -129,12 +115,8 @@ export function Tablet({
               if (e.button === 0 || e.pointerType !== 'mouse') onTap();
             }}
           >
-            <div className="tablet-gem" style={{ clipPath: `polygon(${art.cut})` }}>
-              <div
-                ref={refs.screen}
-                className="tablet-face"
-                style={{ clipPath: `polygon(${art.cut})` }}
-              >
+            <div className="tablet-gem">
+              <div ref={refs.screen} className="tablet-face">
                 <span
                   className="gem-inclusion gem-inclusion-a"
                   style={art.inclusionA}

@@ -20,8 +20,9 @@ export const PANEL_HEIGHT_MOBILE = 240;
 /** The keycap's release — the one rationed bounce on stage. */
 export const KEY_RELEASE: Transition = { type: 'spring', stiffness: 540, damping: 15 };
 
-/** The screen growing to fit a longer fact (FLIP height retarget). */
-export const GROW: Transition = { type: 'spring', stiffness: 220, damping: 27 };
+/** The screen growing to fit a longer fact (FLIP height retarget). Soft on
+    purpose — the slab breathes to its new size, it never pops. */
+export const GROW: Transition = { type: 'spring', stiffness: 110, damping: 22 };
 
 /** One press language for every console pressable (control voice only —
     the TRIGGER key has real key physics instead of a scale token). */

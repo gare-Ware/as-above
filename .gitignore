@@ -5,7 +5,10 @@
 /coverage
 /test-results/
 /playwright-report/
+
+# frame-capture output (peek.mjs / peek-reduced.mjs) — never committed
 /shots/
+/shots-*/
 
 # next.js
 /.next/

@@ -1,22 +1,29 @@
 # AS ABOVE
 
 A small, motion-saturated devotional scene. One thing hangs in the sky — the
-sun or the moon — and its color radiates outward as a field of slow, organic
-waves that fill the whole viewport. Before it floats the Emerald Tablet: a
-cut gem of deep emerald whose pale-jade lettering is engraved into the
-stone. Below, a minimal dune horizon; in the thumb zone, one liquid-glass
-key — **TRIGGER** — and pressing it scrambles the tablet's glyphs into a fun
-conspiracy fact about whatever is above.
+sun a pure luminous disc, the moon a bare pearl veiled in drifting fog — and
+its color radiates outward as a field of slow, organic waves that fill the
+whole viewport in pastel-psychedelic shades. Before it floats the Emerald
+Tablet: a rounded, perfectly symmetric slab of deep emerald, its top bevel
+catching the sky, its pale-jade lettering engraved into the stone. In the
+thumb zone, the app's hero control: a wide pill of clear LIQUID glass —
+deliberately the only unthemed object on stage, the scene visible through
+it, refraction pooling at its rim — carrying the nested pyramid of the
+Emerald Tablet's cover instead of a label. Pressing it scrambles the
+tablet's glyphs into a fun conspiracy fact about whatever is above.
 
 *As above, so below* — the Emerald Tablet's own line. The SKY toggle
 literally chooses what is above.
 
-Everything breathes together: the tablet levitates and its sheen rides the
-tilt, wave crests travel outward forever, and a press sends one bright pulse
-racing through the field while the tablet takes the weight of its new words
-and their engraving surges with light. Nothing ever lurches — every motion
-is interruptible mid-flight. Mash the key, flip the sky mid-swap; the world
-stays liquid. The earth is the only still thing on stage.
+Everything breathes together: the tablet levitates — always plumb — while a
+specular gleam wanders its face, wave crests travel outward forever, and a
+press launches a ripple FROM THE KEY that races up through the whole field,
+heaving each wave ring as its front crosses it, until it reaches the body
+above and the halo flares with a slow wheel of rays — below answering above
+as one gesture. The tablet takes the weight of its new words and their
+engraving surges with light. Nothing ever lurches — every motion is
+interruptible mid-flight. Mash the key, flip the sky mid-swap (the swap's
+ripple radiates from the body instead); the world stays liquid.
 
 ## The corpus
 

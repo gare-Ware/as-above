@@ -10,7 +10,7 @@
   --gem-face-lit: #17573a; /* the light pooling behind the face's center */
   --gem-edge-hi: #47996c; /* bevel planes catching the sky */
   --gem-edge-lo: #051d13; /* bevel planes in shade */
-  --gem-glow: #46d68f; /* the aura's radial color */
+  --gem-glow: #4ce09a; /* the aura's radial color */
   --letter: #c9edd6; /* engraved cut faces */
   --letter-lit: #ecfff4; /* the decode surge */
   --letter-dim: #90c5a5; /* the reality tag's quieter register */
@@ -20,19 +20,21 @@
      The world is the wave field: the body's root color radiating outward in
      ordered shades to the deep edge tone (which is also the page's base
      paint). MOON overrides under [data-mode='moon']; consumers transition
-     their painted properties over --theme-fade. */
-  --body-fill: #f6b64b; /* the sun disc */
-  --body-detail: #d98e2e; /* its surface strokes */
-  --halo: #ffd88a;
-  --wave-root: #f0a844; /* innermost ring — the body's aura zone */
-  --wave-edge: #472515; /* outermost ring = the page's base paint */
-  --pulse: #fff0ca; /* the press pulse ring — near-white so it reads over the field */
-  --ink: #f8ecd4; /* wordmark, hints, chip text on the backdrop */
-  --dune-1: #8f4d2a; /* far dune — redder than the field, so the earth reads */
-  --dune-2: #6e381f;
-  --dune-3: #4f2617; /* near dune (darkest, the floor) */
+     their painted properties over --theme-fade.
+     Register: pastel-psychedelic — bright, saturated-but-soft, with pop;
+     never neon, never earthy. Sun rides peach→rose→violet; moon rides
+     periwinkle→indigo. */
+  --body-fill: #ffd76e; /* the sun disc */
+  --halo: #ffe9ad;
+  --wave-root: #ff9e6e; /* innermost ring — the body's aura zone */
+  --wave-edge: #4a2158; /* outermost ring = the page's base paint */
+  --pulse: #fff6e8; /* the ripple front — near-white so it reads over the field */
+  --ink: #ffeed6; /* wordmark, hints, chip text on the backdrop */
+  --dune-1: #c26584; /* far dune — rose against the coral field, so the earth reads */
+  --dune-2: #93436f;
+  --dune-3: #67234f; /* near dune (darkest, the floor) */
   --star: rgba(226, 240, 229, 0); /* stars sleep in sun mode */
-  --glass-tint: rgba(255, 243, 222, 0.13); /* the liquid-glass fill */
+  --glass-tint: rgba(255, 243, 222, 0.13); /* the liquid-glass fill (console voice) */
   --glass-edge: rgba(255, 255, 255, 0.38);
 
   /* Shared design constants */
@@ -43,28 +45,29 @@
      reaches every corner from the body's center whatever the aspect. */
   --stage-h: min(100dvh, 940px);
   --stage-w: min(100vw, calc(var(--stage-h) * 0.62));
+  /* The slab's corner round — every major element is soft-edged. */
+  --tablet-radius: clamp(26px, calc(var(--stage-h) * 0.046), 42px);
   /* Twice the center-to-farthest-corner distance: the field always reaches
      every corner, and ring density stays consistent across aspects.
      (hypot accepts lengths; pow/sqrt would not.) */
   --wave-size: calc(2 * hypot(50vw, 100dvh));
 }
 
-/* The cool reading: silver-green moon, night shades, sparse stars. */
+/* The cool reading: pearl moon, periwinkle night, sparse stars. */
 [data-mode='moon'] {
   --gem-face: #0c3722;
   --gem-face-lit: #144d33;
-  --body-fill: #dfeee2;
-  --body-detail: #a9c4ae;
-  --halo: #eef8f0;
-  --wave-root: #a9cbb4;
-  --wave-edge: #0a1410;
-  --pulse: #eafff0;
-  --ink: #dcebde;
-  --dune-1: #1d2b21;
-  --dune-2: #141f18;
-  --dune-3: #0e1611;
-  --star: rgba(226, 240, 229, 0.9);
-  --glass-tint: rgba(213, 240, 222, 0.1);
+  --body-fill: #f5f8ff;
+  --halo: #dfe8ff;
+  --wave-root: #b9c6f8;
+  --wave-edge: #191c4e;
+  --pulse: #f0f4ff;
+  --ink: #e9edff;
+  --dune-1: #565da4;
+  --dune-2: #3c3f85;
+  --dune-3: #262a63;
+  --star: rgba(233, 240, 255, 0.9);
+  --glass-tint: rgba(214, 224, 255, 0.1);
   --glass-edge: rgba(255, 255, 255, 0.3);
 }
 
@@ -154,9 +157,13 @@ body {
 .wave-pulse {
   fill: none;
   stroke: var(--pulse);
-  stroke-width: 4.5;
-  opacity: 0;
+  stroke-width: 5.5;
   transition: stroke var(--theme-fade) ease;
+}
+/* The trailing echo: a thick faint stroke reads as glow — zero filters on
+   this per-frame SVG, ever. */
+.wave-pulse-echo {
+  stroke-width: 12;
 }
 
 .stage {
@@ -182,24 +189,6 @@ body {
   }
 }
 
-/* The wordmark — display voice, quiet, clear of the centered sun. */
-.wordmark {
-  position: absolute;
-  top: calc(var(--stage-h) * 0.026);
-  left: calc(var(--stage-h) * 0.02);
-  z-index: 7;
-  font-family: var(--font-display), Georgia, serif;
-  font-weight: 600;
-  font-size: calc(var(--stage-h) * 0.019);
-  letter-spacing: 0.48em;
-  text-transform: uppercase;
-  color: var(--ink);
-  opacity: 0.8;
-  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.35);
-  transition: color var(--theme-fade) ease;
-  white-space: nowrap;
-}
-
 /* ── The sky — a filled disc now; the waves are its voice ── */
 .sky {
   position: absolute;
@@ -215,17 +204,49 @@ body {
   fill: var(--body-fill);
   transition: fill var(--theme-fade) ease;
 }
-.sky-detail {
-  stroke: var(--body-detail);
-  transition: stroke var(--theme-fade) ease;
-}
-.sky-detail-fill {
-  fill: var(--body-detail);
-  transition: fill var(--theme-fade) ease;
-}
 .sky-halo {
   fill: var(--halo);
   transition: fill var(--theme-fade) ease;
+}
+
+/* The ray bloom BENEATH the body: eight soft beams (repeating conic, then
+   blurred and radially masked into a band around the disc). Invisible at
+   rest; the engine raises it — and wheels it slowly — while a ripple's
+   arrival flare lives. Same z as .sky, earlier in the DOM, so it paints
+   beneath the disc. */
+.sky-rays {
+  position: absolute;
+  top: calc(var(--stage-h) * -0.146);
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(var(--stage-h) * 0.63);
+  height: calc(var(--stage-h) * 0.63);
+  z-index: 3;
+  border-radius: 999px;
+  background: repeating-conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    color-mix(in oklab, var(--halo) 62%, transparent) 19deg 26deg,
+    transparent 45deg
+  );
+  filter: blur(7px);
+  -webkit-mask-image: radial-gradient(
+    circle,
+    transparent 17%,
+    black 34%,
+    rgba(0, 0, 0, 0.6) 55%,
+    transparent 72%
+  );
+  mask-image: radial-gradient(
+    circle,
+    transparent 17%,
+    black 34%,
+    rgba(0, 0, 0, 0.6) 55%,
+    transparent 72%
+  );
+  opacity: 0;
+  pointer-events: none;
+  will-change: opacity, transform;
 }
 
 /* ── The earth — minimal dunes, the one still thing on stage ── */
@@ -255,9 +276,12 @@ body {
 /* ── The Emerald Tablet — a cut gem, not a panel ── */
 .tablet-root {
   position: absolute;
-  top: calc(var(--stage-h) * 0.215);
+  /* Center-anchored: the slab holds the stage's middle and its FLIP growth
+     breathes symmetrically up toward the body and down toward the key —
+     gaps stay balanced at every fact length. */
+  top: 50%;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translate(-50%, -50%);
   width: min(78%, calc(var(--stage-h) * 0.43));
   z-index: 5;
 }
@@ -282,36 +306,49 @@ body {
   user-select: none;
   -webkit-user-select: none;
   touch-action: manipulation;
-  /* Depth lives HERE, on the un-clipped parent: a clip-path on the gem
-     would scissor its own drop-shadow away. The shadow follows the child's
-     clipped silhouette. */
-  filter: drop-shadow(0 22px 34px rgba(0, 0, 0, 0.45))
-    drop-shadow(0 0 26px color-mix(in oklab, var(--gem-glow) 26%, transparent));
 }
-/* The gem: clip-path silhouettes are seeded inline by Tablet.tsx (chamfered,
-   slightly irregular). The outer layer is the bevel band. */
+/* The gem: a polished, perfectly symmetric rounded slab (no clip-path, no
+   hard edges). Light falls from directly above: the frame's vertical
+   gradient + mirrored side insets keep left and right identical, and the
+   ::before crown is the top bevel catching the sky. Depth is box-shadow on
+   the slab itself — border-radius carries the silhouette natively. */
 .tablet-gem {
   position: relative;
-  background:
-    linear-gradient(152deg, var(--gem-edge-hi) 0%, #1c6a44 26%, var(--gem-edge-lo) 78%),
-    conic-gradient(
-      from 210deg at 50% 50%,
-      rgba(255, 255, 255, 0.16),
-      rgba(0, 0, 0, 0.22) 24%,
-      rgba(255, 255, 255, 0.08) 52%,
-      rgba(0, 0, 0, 0.3) 78%,
-      rgba(255, 255, 255, 0.16)
-    );
-  background-blend-mode: overlay;
+  border-radius: var(--tablet-radius);
+  /* The frame is PADDING (not a face margin): a child margin would collapse
+     through this box and erase the top/bottom bevel bands. */
+  padding: clamp(9px, 3.6%, 15px);
+  background: linear-gradient(180deg, var(--gem-edge-hi) 0%, #1f6f48 34%, var(--gem-edge-lo) 100%);
+  box-shadow:
+    0 26px 44px rgba(0, 0, 0, 0.42),
+    0 0 30px color-mix(in oklab, var(--gem-glow) 24%, transparent),
+    inset 0 2px 2px rgba(255, 255, 255, 0.42),
+    inset 0 -2px 3px rgba(0, 0, 0, 0.45),
+    inset 2px 0 3px rgba(255, 255, 255, 0.1),
+    inset -2px 0 3px rgba(255, 255, 255, 0.1);
+}
+/* The bevel crown — the top edge holds the sky's light. */
+.tablet-gem::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.34) 0%,
+    rgba(255, 255, 255, 0.1) 4%,
+    rgba(255, 255, 255, 0) 10%
+  );
+  pointer-events: none;
 }
 .tablet-face {
   position: relative;
-  margin: clamp(9px, 3.6%, 15px);
+  border-radius: calc(var(--tablet-radius) * 0.64);
   padding: clamp(16px, 7.5%, 30px);
   /* The idle gem is a full tablet, not a bar: glyphs and hint are
      absolutely placed, so the face needs its own resting stature
-     (portrait, like the sketch). */
-  min-height: calc(var(--stage-h) * 0.35);
+     (portrait, like the sketch — never square). */
+  min-height: calc(var(--stage-h) * 0.47);
   background:
     radial-gradient(
       120% 95% at 50% 12%,
@@ -335,17 +372,18 @@ body {
   filter: blur(18px);
   pointer-events: none;
 }
-/* The specular sheen — engine-driven: it slides with the float's tilt. */
+/* The specular sheen — engine-driven: a near-vertical gleam wandering on
+   its own slow period (the plumb tablet never tilts; the light drifts). */
 .tablet-sheen {
   position: absolute;
-  inset: -12% -30%;
+  inset: -12% -18%;
   background: linear-gradient(
-    112deg,
-    transparent 34%,
-    rgba(255, 255, 255, 0.075) 46%,
-    rgba(255, 255, 255, 0.14) 50%,
-    rgba(255, 255, 255, 0.075) 54%,
-    transparent 66%
+    104deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.04) 44%,
+    rgba(255, 255, 255, 0.08) 50%,
+    rgba(255, 255, 255, 0.04) 56%,
+    transparent 70%
   );
   pointer-events: none;
 }
@@ -430,56 +468,133 @@ main[data-decode='decoding'] .tablet-text {
   transition-delay: 1.4s;
 }
 
-/* ── The TRIGGER — liquid glass ── */
+/* ── The TRIGGER — REAL liquid glass, the app's hero. It does not sample
+   its backdrop at all: it holds a pixel-aligned windowed COPY of the wave
+   field (same seed, driven by the same engine) and BENDS it with a true
+   feDisplacementMap lens (lib/lens.ts, the glass-demo technique). The
+   painted layers above the bent scene are whispers: a faint tint, a
+   hairline uneven rim, a slim gloss — never a solid border, never frost. ── */
 .key-zone {
   position: absolute;
   left: 0;
   right: 0;
-  bottom: max(calc(var(--stage-h) * 0.048), env(safe-area-inset-bottom));
+  bottom: max(calc(var(--stage-h) * 0.055), env(safe-area-inset-bottom));
   z-index: 6;
   display: flex;
   justify-content: center;
 }
-.glass-pill {
+.glass-key {
   position: relative;
   display: grid;
   place-items: center;
-  width: clamp(164px, calc(var(--stage-h) * 0.24), 224px);
-  height: clamp(52px, calc(var(--stage-h) * 0.072), 64px);
+  width: clamp(150px, calc(var(--stage-h) * 0.225), 196px);
+  height: clamp(56px, calc(var(--stage-h) * 0.08), 68px);
   padding: 0;
   border: 0;
   border-radius: 999px;
   cursor: pointer;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
-  background: linear-gradient(
-    to bottom,
-    color-mix(in oklab, white 22%, var(--glass-tint)),
-    var(--glass-tint) 55%,
-    color-mix(in oklab, black 10%, var(--glass-tint))
-  );
-  backdrop-filter: blur(16px) saturate(1.7);
-  -webkit-backdrop-filter: blur(16px) saturate(1.7);
+  background: none; /* the bent scene copy IS the body */
   box-shadow:
-    inset 0 1px 0 var(--glass-edge),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.22),
-    inset 1px 0 0 rgba(255, 255, 255, 0.14),
-    0 14px 34px -12px rgba(0, 0, 0, 0.55),
-    0 2px 10px rgba(0, 0, 0, 0.22);
+    0 22px 44px -14px rgba(0, 0, 0, 0.5),
+    0 4px 14px rgba(0, 0, 0, 0.2),
+    inset 0 -8px 14px -10px rgba(8, 18, 36, 0.3);
   transition: box-shadow 180ms ease;
 }
-/* The curved top specular — glass, not plastic. */
-.pill-shine {
+/* The bent scene: the field copy, clipped to the pill, refracted by the
+   lens (its CSS filter chain is written by lib/lens.ts). */
+.key-scene {
   position: absolute;
-  inset: 7% 9% 46%;
+  inset: 0;
+  border-radius: inherit;
+  overflow: hidden;
+  background: var(--wave-edge);
+  transition: background-color var(--theme-fade) ease;
+  pointer-events: none;
+}
+.key-scene-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+/* A whisper of glass body over the bent scene — nowhere near frost. */
+.key-tint {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.16) 0%,
+    rgba(255, 255, 255, 0.04) 40%,
+    rgba(255, 255, 255, 0.01) 62%,
+    rgba(255, 255, 255, 0.08) 100%
+  );
+  pointer-events: none;
+}
+/* The specular rim: a hairline, UNEVEN — hot along the top curve, all but
+   gone at the sides, soft underneath. Left/right mirror-identical. */
+.key-rim {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.62) 0%,
+    rgba(255, 255, 255, 0.07) 24%,
+    rgba(255, 255, 255, 0.03) 62%,
+    rgba(255, 255, 255, 0.3) 100%
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+}
+/* A slim gloss hugging the top curvature — a band, not a half-fill sheet
+   (the sheet is what read as "bubble"). */
+.key-gloss {
+  position: absolute;
+  inset: 4% 10% 64%;
   border-radius: 999px;
-  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0.02));
-  opacity: 0.8;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.34) 0%,
+    rgba(255, 255, 255, 0.05) 70%,
+    transparent 100%
+  );
+  opacity: 0.7;
   pointer-events: none;
   transition: opacity 160ms ease;
 }
+/* …the light pooling along the bottom curve… */
+.key-glint {
+  position: absolute;
+  inset: 62% 14% 5%;
+  border-radius: 999px;
+  background: radial-gradient(60% 120% at 50% 100%, rgba(255, 255, 255, 0.22), transparent 72%);
+  opacity: 0.55;
+  pointer-events: none;
+}
+/* …and the wet streaks wrapping the two caps (mirrored — symmetry law). */
+.key-caps {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background:
+    radial-gradient(13% 54% at 5.5% 50%, rgba(255, 255, 255, 0.2), transparent 78%),
+    radial-gradient(13% 54% at 94.5% 50%, rgba(255, 255, 255, 0.2), transparent 78%);
+  filter: blur(1.5px);
+  pointer-events: none;
+}
 /* The press bloom: a refraction flash from the touch point. */
-.pill-bloom {
+.key-bloom {
   position: absolute;
   left: var(--press-x, 50%);
   top: var(--press-y, 50%);
@@ -487,52 +602,72 @@ main[data-decode='decoding'] .tablet-text {
   height: 10px;
   border-radius: 999px;
   transform: translate(-50%, -50%) scale(0);
-  background: radial-gradient(
-    closest-side,
-    color-mix(in oklab, var(--pulse) 80%, white),
-    transparent
-  );
+  background: radial-gradient(closest-side, rgba(255, 255, 255, 0.95), transparent);
   opacity: 0;
   pointer-events: none;
 }
-.glass-pill[data-pressed='true'] .pill-shine {
+/* The local shock ring: where the field ripple is born. */
+.key-shock {
+  position: absolute;
+  inset: -2px;
+  border-radius: 999px;
+  border: 1.5px solid rgba(255, 255, 255, 0.65);
+  opacity: 0;
+  pointer-events: none;
+}
+.glass-key[data-pressed='true'] .key-gloss {
   opacity: 0.45;
 }
-.glass-pill[data-pressed='true'] {
+.glass-key[data-pressed='true'] {
   box-shadow:
-    inset 0 1px 0 var(--glass-edge),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.28),
-    inset 0 0 22px color-mix(in oklab, var(--pulse) 32%, transparent),
-    0 6px 18px -8px rgba(0, 0, 0, 0.5),
-    0 0 26px color-mix(in oklab, var(--pulse) 38%, transparent);
+    0 10px 24px -10px rgba(0, 0, 0, 0.45),
+    0 2px 8px rgba(0, 0, 0, 0.18),
+    0 0 28px rgba(255, 255, 255, 0.22),
+    inset 0 -6px 12px -9px rgba(8, 18, 36, 0.3),
+    inset 0 0 24px rgba(255, 255, 255, 0.2);
 }
 @media (prefers-reduced-motion: no-preference) {
-  [data-motion='live'] .pill-bloom[data-bloom='true'] {
-    animation: pill-bloom 620ms cubic-bezier(0.2, 0, 0.2, 1) both;
+  [data-motion='live'] .key-bloom[data-bloom='true'] {
+    animation: key-bloom 620ms cubic-bezier(0.2, 0, 0.2, 1) both;
+  }
+  [data-motion='live'] .key-shock[data-bloom='true'] {
+    animation: key-shock 560ms cubic-bezier(0.2, 0, 0.2, 1) both;
   }
 }
-@keyframes pill-bloom {
+@keyframes key-bloom {
   0% {
     transform: translate(-50%, -50%) scale(0);
     opacity: 0.85;
   }
   100% {
-    transform: translate(-50%, -50%) scale(26);
+    transform: translate(-50%, -50%) scale(22);
     opacity: 0;
   }
 }
-.pill-label {
+@keyframes key-shock {
+  0% {
+    transform: scale(1);
+    opacity: 0.55;
+  }
+  100% {
+    transform: scale(2.1);
+    opacity: 0;
+  }
+}
+/* The emblem — the nested pyramid, engraved in light. */
+.key-emblem {
   position: relative;
   z-index: 1;
-  font-family: var(--font-terminal), monospace;
-  font-size: clamp(12px, calc(var(--stage-h) * 0.0155), 14px);
-  text-transform: uppercase;
-  letter-spacing: 0.42em;
-  text-indent: 0.42em;
-  color: var(--ink);
-  opacity: 0.92;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
-  transition: color var(--theme-fade) ease;
+  height: 58%;
+  aspect-ratio: 1;
+  stroke: rgba(255, 255, 255, 0.92);
+  stroke-width: 1.7;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35));
+}
+@media (hover: hover) and (pointer: fine) {
+  .glass-key:hover .key-gloss {
+    opacity: 1;
+  }
 }
 
 /* ── The console — liquid glass, same material as the trigger ── */
@@ -664,28 +799,6 @@ main[data-decode='decoding'] .tablet-text {
   background: color-mix(in oklab, var(--ink) 85%, transparent);
   opacity: 0;
 }
-.mist {
-  position: absolute;
-  width: 46%;
-  height: calc(var(--stage-h) * 0.05);
-  border-radius: 999px;
-  filter: blur(16px);
-  background: radial-gradient(
-    closest-side,
-    color-mix(in oklab, var(--dune-1) 62%, transparent),
-    transparent
-  );
-  opacity: 0.16;
-}
-.mist-a {
-  left: 4%;
-  bottom: calc(var(--stage-h) * 0.16);
-}
-.mist-b {
-  right: 2%;
-  bottom: calc(var(--stage-h) * 0.2);
-  opacity: 0.11;
-}
 
 /* ══ AMBIENT LOOPS — gated twice: the MOTION chip and the OS preference.
    STILL leaves everything visible and inert. ════════════════════════════════ */
@@ -699,12 +812,6 @@ main[data-decode='decoding'] .tablet-text {
   [data-motion='live'] .mote {
     animation: mote-rise var(--mote-dur) linear infinite;
     animation-delay: var(--mote-delay);
-  }
-  [data-motion='live'] .mist-a {
-    animation: mist-drift 36s ease-in-out infinite alternate;
-  }
-  [data-motion='live'] .mist-b {
-    animation: mist-drift 49s ease-in-out infinite alternate-reverse;
   }
   [data-motion='live'] .tablet-glyphs {
     animation: glyph-drift 26s ease-in-out infinite alternate;
@@ -723,6 +830,15 @@ main[data-decode='decoding'] .tablet-text {
   }
   [data-motion='live'] .gem-inclusion-b {
     animation: inclusion-drift 31s ease-in-out infinite alternate-reverse;
+  }
+  [data-motion='live'] .moon-fog-a {
+    animation: fog-drift-a 31s ease-in-out infinite alternate;
+  }
+  [data-motion='live'] .moon-fog-b {
+    animation: fog-drift-b 43s ease-in-out infinite alternate-reverse;
+  }
+  [data-motion='live'] .moon-fog-c {
+    animation: fog-drift-c 37s ease-in-out infinite alternate;
   }
 }
 
@@ -750,14 +866,6 @@ main[data-decode='decoding'] .tablet-text {
     opacity: 0;
   }
 }
-@keyframes mist-drift {
-  from {
-    transform: translateX(-5%);
-  }
-  to {
-    transform: translateX(5%);
-  }
-}
 @keyframes glyph-drift {
   from {
     transform: translateY(-6px);
@@ -780,5 +888,30 @@ main[data-decode='decoding'] .tablet-text {
   }
   to {
     transform: translate(7%, 5%) scale(1.12);
+  }
+}
+/* The moon's fog veils: three slow crossings on incommensurate periods. */
+@keyframes fog-drift-a {
+  from {
+    transform: translate(-13px, 0);
+  }
+  to {
+    transform: translate(15px, 0);
+  }
+}
+@keyframes fog-drift-b {
+  from {
+    transform: translate(12px, 0);
+  }
+  to {
+    transform: translate(-16px, 0);
+  }
+}
+@keyframes fog-drift-c {
+  from {
+    transform: translate(-9px, 2px);
+  }
+  to {
+    transform: translate(11px, -2px);
   }
 }

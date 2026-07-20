@@ -6,7 +6,10 @@
 // the whole sea glides on a mode flip). This component supplies geometry
 // only; the engine (AsAboveApp) writes one scale per ring — a phase-lagged
 // radial oscillation that reads as crests traveling outward forever, with no
-// respawn seam — and drives the press-pulse rings through the same field.
+// respawn seam — and drives the ripple fronts through the same field: each
+// pulse slot is a two-circle group (bright leading edge + thick faint echo —
+// glow with zero filters) the engine positions at the fire's ORIGIN (the key
+// for a press, the body for a swap) and expands across the whole sea.
 // Fills are flat and unfiltered on purpose: this SVG repaints every frame.
 
 import { useMemo, type RefObject } from 'react';
@@ -14,9 +17,34 @@ import { seededRng } from '@/lib/rand';
 import { TABLET } from '@/lib/tablet';
 
 export interface WavesRefs {
+  svg: RefObject<SVGSVGElement | null>;
   rings: RefObject<(SVGPathElement | null)[]>;
-  pulses: RefObject<(SVGCircleElement | null)[]>;
+  pulses: RefObject<(SVGGElement | null)[]>;
   radii: RefObject<number[]>;
+}
+
+export interface WaveRingGeo {
+  R: number;
+  d: string;
+  mix: number;
+}
+
+/**
+ * The ring geometry, pure and deterministic per seed — exported so the
+ * TRIGGER key can render a pixel-aligned windowed COPY of the field inside
+ * its glass (the real-refraction lens bends the copy; same seed → same sea).
+ */
+export function buildWaveRings(seed: string): WaveRingGeo[] {
+  const rng = seededRng(`${seed}:waves`);
+  const W = TABLET.waves;
+  const out = [] as WaveRingGeo[];
+  for (let i = 0; i < W.ringCount; i += 1) {
+    const R = W.innerRadius + ((W.outerRadius - W.innerRadius) * i) / (W.ringCount - 1);
+    // Shade order: root at the body, easing toward the edge tone.
+    const mix = Math.round(100 * (1 - Math.pow(i / (W.ringCount - 1), 1.18)));
+    out.push({ R, d: blobPath(rng, R, W.wobbleBase + i * W.wobblePerRing), mix });
+  }
+  return out;
 }
 
 /** A closed organic ring: radial wobble smoothed Catmull-Rom → cubic. */
@@ -42,15 +70,7 @@ function blobPath(rng: () => number, R: number, wobble: number, points = 26): st
 
 export function Waves({ seed, refs }: { seed: string; refs: WavesRefs }) {
   const rings = useMemo(() => {
-    const rng = seededRng(`${seed}:waves`);
-    const W = TABLET.waves;
-    const out = [] as { R: number; d: string; mix: number }[];
-    for (let i = 0; i < W.ringCount; i += 1) {
-      const R = W.innerRadius + ((W.outerRadius - W.innerRadius) * i) / (W.ringCount - 1);
-      // Shade order: root at the body, easing toward the edge tone.
-      const mix = Math.round(100 * (1 - Math.pow(i / (W.ringCount - 1), 1.18)));
-      out.push({ R, d: blobPath(rng, R, W.wobbleBase + i * W.wobblePerRing), mix });
-    }
+    const out = buildWaveRings(seed);
     refs.radii.current = out.map((r) => r.R);
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -58,6 +78,7 @@ export function Waves({ seed, refs }: { seed: string; refs: WavesRefs }) {
 
   return (
     <svg
+      ref={refs.svg}
       className="waves"
       viewBox="0 0 1200 1200"
       aria-hidden="true"
@@ -82,16 +103,26 @@ export function Waves({ seed, refs }: { seed: string; refs: WavesRefs }) {
           );
         })}
         {Array.from({ length: TABLET.waves.pulse.pool }, (_, p) => (
-          <circle
+          <g
             key={p}
             ref={(el) => {
               refs.pulses.current[p] = el;
             }}
-            r={TABLET.waves.innerRadius}
-            className="wave-pulse"
-            vectorEffect="non-scaling-stroke"
             opacity={0}
-          />
+          >
+            {/* Trailing echo first (beneath), leading edge on top. */}
+            <circle
+              r={TABLET.waves.innerRadius * 0.9}
+              className="wave-pulse wave-pulse-echo"
+              vectorEffect="non-scaling-stroke"
+              opacity={TABLET.waves.pulse.echoOpacity}
+            />
+            <circle
+              r={TABLET.waves.innerRadius}
+              className="wave-pulse"
+              vectorEffect="non-scaling-stroke"
+            />
+          </g>
         ))}
       </g>
     </svg>

@@ -8,8 +8,8 @@
 // motion through every element, all the time. Nothing is ever fully still
 // (except the altar — the anchor), and nothing ever lurches:
 //
-//   float   — the tablet's levitation: three independent sines (bob, sway,
-//             tilt) on incommensurate periods, like mass suspended in water
+//   float   — the tablet's levitation: a pure vertical bob (the tablet is
+//             always plumb — symmetry is the design language; no sway, no tilt)
 //   dip     — the decode's suspension physics: the tablet "takes the weight"
 //             of the new words, sinks a few px, springs back (underdamped)
 //   glow    — the gem's aura breathes on its own period; a decode adds a
@@ -20,9 +20,13 @@
 //   waves   — the world: rings radiating from the body across the viewport.
 //             A phase-offset radial oscillation makes crests travel outward
 //             forever; the SAME swell that surges the gem's glow swells the
-//             wave amplitude, and every fire launches a pulse ring through
-//             the field — press, rays, and tablet answer as one gesture
-//   sheen   — the specular band on the gem slides with the float's tilt
+//             wave amplitude, and every fire launches a ripple FROM ITS CAUSE
+//             (the key for a press, the body for a sky swap) that races the
+//             field, kicks each ring as its front passes, and FLARES the
+//             body's halo + rays when it arrives — below answers above as
+//             one continuous gesture
+//   sheen   — the specular band on the gem drifts on its own slow period
+//             (the tablet no longer tilts, so the light itself wanders)
 //
 // Ranking law: every ambient amplitude here is smaller AND slower than any
 // motion the user causes (dip max ≈ 13px vs bob 7px; swap 1.2s vs drift 30s;
@@ -38,14 +42,10 @@ export const TABLET = {
   /** Master switch: false = inert stage (facts still deal; motion stops). */
   alive: true,
 
-  /** Levitation — three sines on incommensurate periods (never syncs). */
+  /** Levitation — a single vertical sine: the tablet stays perfectly plumb. */
   float: {
     ampY: 7, // px bob
     periodY: 6200,
-    ampX: 3.2, // px sway
-    periodX: 9700,
-    tiltDeg: 0.85, // slight independent tilt
-    periodTilt: 12400,
   },
 
   /** The decode dip — underdamped so it sinks and rights itself in ~2 rings. */
@@ -64,8 +64,10 @@ export const TABLET = {
     swellDecayPerSec: 1.5,
   },
 
-  /** Screen growth when a fact needs more slab (FLIP height spring). */
-  grow: { stiffness: 220, damping: 27 },
+  /** Screen growth when a fact needs more slab (FLIP height spring —
+      numbers live in lib/motion.ts GROW; mirrored here for the record).
+      Soft on purpose: the slab breathes to size, it never pops. */
+  grow: { stiffness: 110, damping: 22 },
 
   /** Decode cadence (pure math in lib/decode.ts; numbers owned here). */
   decode: { ...DECODE_DEFAULTS } satisfies DecodeOpts,
@@ -103,21 +105,37 @@ export const TABLET = {
     phaseStepRad: 0.66, // per-ring lag — the outward travel
     ampU: 11, // radial crest height, svg units (constant px ≈ real wave)
     swellAmpBoost: 1.7, // the decode swell swells the sea too
-    /** The press pulse: a bright ring racing the field. */
+    /** The ripple: a two-ring front launched FROM ITS CAUSE (key or body),
+        racing the whole field, kicking each wave ring as it passes and
+        flaring the body's halo + rays on arrival. */
     pulse: {
-      pool: 3, // simultaneous pulses (mash headroom)
-      speedPerSec: 0.58, // full crossing ≈ 1.7s
-      maxOpacity: 0.65,
-      fromScale: 0.14,
-      toScale: 1.2,
+      pool: 3, // simultaneous ripples (mash headroom)
+      speedPerSec: 0.46, // full crossing ≈ 2.2s (quadratic ease — savored, not snapped)
+      maxOpacity: 0.8,
+      fromScale: 0.04, // a point at the cause…
+      toScale: 7.4, // …to past the farthest corner (radius ≈ 1110u)
+      echoOpacity: 0.4, // the trailing soft ring (thick faint stroke = glow)
+      kickAmpU: 20, // radial kick a ring gets as the front crosses it
+      kickWidthU: 115, // kernel half-width of that kick, svg units
+      flareBoost: 0.5, // halo opacity surge when the front reaches the body
+      flareDecayPerSec: 1.5,
+      raysMaxOpacity: 0.8, // the ray bloom behind the body at full flare
+      raysDegPerSec: 6, // the rays' slow shimmer rotation while lit
     },
   },
 
-  /** The gem's specular band rides the float tilt (light stays celestial). */
-  sheen: { travelPct: 16 },
+  /** The gem's specular band — its own slow incommensurate wander (small:
+      at the extremes it must never park on a rail and fake a side-light). */
+  sheen: { travelPct: 9, periodMs: 15400 },
 
-  /** The TRIGGER glass pill — travel fast, settle liquid (the one bounce). */
-  key: { travelPx: 4.5, pressMs: 45 },
+  /** The glass key — travel fast, settle liquid (the one bounce). The lens
+      is REAL refraction (feDisplacementMap over a windowed copy of the
+      field — lib/lens.ts); the press deepens the bend. */
+  key: {
+    travelPx: 3,
+    pressMs: 45,
+    lens: { depth: 26, strength: 60, chroma: 0.12, pressBoost: 1.45 },
+  },
 
   /** ORACLE — AUTO: the tablet re-decodes on its own after this much idle. */
   oracleIdleMs: 45_000,
@@ -138,13 +156,11 @@ export function springStep(
   return [x + nextV * dt, nextV];
 }
 
-/** The levitation pose at time t (ms since engine birth). */
-export function floatPose(tMs: number): { x: number; y: number; rot: number } {
+/** The levitation pose at time t (ms since engine birth) — plumb, bob only. */
+export function floatPose(tMs: number): { y: number } {
   const f = TABLET.float;
   return {
     y: f.ampY * Math.sin((2 * Math.PI * tMs) / f.periodY),
-    x: f.ampX * Math.sin((2 * Math.PI * tMs) / f.periodX + 1.1),
-    rot: f.tiltDeg * Math.sin((2 * Math.PI * tMs) / f.periodTilt + 2.3),
   };
 }
 

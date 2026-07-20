@@ -1,11 +1,13 @@
 'use client';
 
-// The body above — sun or moon as a FILLED disc now: the wave field is its
-// voice, so the body itself stays quiet and solid, with only a whisper of
-// surface detail. Both bodies share one center; the engine drives the
-// eclipse-adjacent swap (the leaving body sinks and recedes while the other
-// rises through it), the almost-imperceptible drift, and the halo breathing.
-// Geometry only — every animated attribute is written by the engine via refs.
+// The body above — sun or moon, PREMIUM-QUIET: no outlines, no surface
+// doodles. The sun is a pure luminous disc (a white-hot core dissolving into
+// the gold), the moon a bare pearl with soft limb shading and slow fog veils
+// drifting across it (the veils are CSS-owned ambient, gated like all
+// dressing). Both bodies share one center; the engine drives the
+// eclipse-adjacent swap, the almost-imperceptible drift, the halo breathing,
+// and the ripple's arrival flare. Geometry only — every animated attribute
+// is written by the engine via refs.
 
 import type { RefObject } from 'react';
 
@@ -28,9 +30,30 @@ export function Sky({ refs }: { refs: SkyRefs }) {
         <filter id="sky-blur" x="-60%" y="-60%" width="220%" height="220%">
           <feGaussianBlur stdDeviation="15" />
         </filter>
+        <filter id="sky-soft" x="-40%" y="-40%" width="180%" height="180%">
+          <feGaussianBlur stdDeviation="6" />
+        </filter>
+        {/* The sun's living center: white heat easing into the disc color. */}
+        <radialGradient id="sun-core">
+          <stop offset="0%" stopColor="rgba(255, 255, 255, 0.92)" />
+          <stop offset="42%" stopColor="rgba(255, 255, 255, 0.30)" />
+          <stop offset="74%" stopColor="rgba(255, 255, 255, 0.05)" />
+          <stop offset="100%" stopColor="rgba(255, 255, 255, 0)" />
+        </radialGradient>
+        {/* Limb shading: the pearl darkens a breath at its rim — depth
+            without a drawn edge. */}
+        <radialGradient id="moon-limb">
+          <stop offset="0%" stopColor="rgba(96, 118, 176, 0)" />
+          <stop offset="64%" stopColor="rgba(96, 118, 176, 0)" />
+          <stop offset="88%" stopColor="rgba(96, 118, 176, 0.10)" />
+          <stop offset="100%" stopColor="rgba(70, 92, 150, 0.26)" />
+        </radialGradient>
+        <clipPath id="moon-clip">
+          <circle cx={C} cy={C} r={84} />
+        </clipPath>
       </defs>
       <g ref={refs.drift}>
-        {/* ── SUN: a solid gold disc with faint surface strokes ── */}
+        {/* ── SUN: halo, disc, luminous core — nothing else ── */}
         <g ref={refs.sun}>
           <circle
             ref={refs.sunHalo}
@@ -42,23 +65,10 @@ export function Sky({ refs }: { refs: SkyRefs }) {
             opacity={0.42}
           />
           <circle cx={C} cy={C} r={88} className="sky-body" />
-          <g className="sky-detail" fill="none" strokeWidth={2.2} strokeLinecap="round" opacity={0.4}>
-            <path d={`M ${C - 52} ${C - 30} q 24 6 62 1 q 22 -3 40 2`} />
-            <path d={`M ${C - 64} ${C - 2} q 34 8 76 2 q 26 -4 50 3`} />
-            <path d={`M ${C - 58} ${C + 28} q 28 7 64 2 q 20 -3 44 2`} />
-            <path d={`M ${C - 40} ${C + 54} q 22 5 48 1 q 14 -2 30 2`} />
-          </g>
-          <circle
-            cx={C}
-            cy={C}
-            r={88}
-            fill="none"
-            stroke="rgba(255, 244, 214, 0.4)"
-            strokeWidth={1.4}
-          />
+          <circle cx={C} cy={C} r={88} fill="url(#sun-core)" />
         </g>
 
-        {/* ── MOON: a silver-green disc, craters, a breath of terminator ── */}
+        {/* ── MOON: halo, bare pearl, limb shading, drifting fog veils ── */}
         <g ref={refs.moon}>
           <circle
             ref={refs.moonHalo}
@@ -70,25 +80,35 @@ export function Sky({ refs }: { refs: SkyRefs }) {
             opacity={0.36}
           />
           <circle cx={C} cy={C} r={84} className="sky-body" />
-          <g className="sky-detail-fill" opacity={0.5}>
-            <circle cx={C + 26} cy={C - 22} r={10} />
-            <circle cx={C + 40} cy={C + 14} r={6} />
-            <circle cx={C + 12} cy={C + 38} r={4.5} />
-            <circle cx={C - 8} cy={C - 44} r={3.5} />
+          <circle cx={C} cy={C} r={84} fill="url(#moon-limb)" />
+          {/* The veils cross the UPPER dome — the part of the pearl the
+              tablet never hides. */}
+          <g clipPath="url(#moon-clip)" filter="url(#sky-soft)">
+            <ellipse
+              className="moon-fog moon-fog-a"
+              cx={C - 24}
+              cy={C - 44}
+              rx={96}
+              ry={22}
+              fill="rgba(134, 156, 205, 0.38)"
+            />
+            <ellipse
+              className="moon-fog moon-fog-b"
+              cx={C + 34}
+              cy={C - 10}
+              rx={104}
+              ry={26}
+              fill="rgba(120, 143, 196, 0.3)"
+            />
+            <ellipse
+              className="moon-fog moon-fog-c"
+              cx={C - 6}
+              cy={C - 28}
+              rx={88}
+              ry={11}
+              fill="rgba(255, 255, 255, 0.6)"
+            />
           </g>
-          {/* the shaded limb — a quiet crescent of depth */}
-          <path
-            d={`M ${C} ${C - 84} A 84 84 0 0 0 ${C} ${C + 84} A 30 84 0 0 1 ${C} ${C - 84} Z`}
-            fill="rgba(6, 22, 14, 0.14)"
-          />
-          <circle
-            cx={C}
-            cy={C}
-            r={84}
-            fill="none"
-            stroke="rgba(240, 252, 242, 0.35)"
-            strokeWidth={1.4}
-          />
         </g>
       </g>
     </svg>

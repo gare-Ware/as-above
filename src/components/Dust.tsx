@@ -1,9 +1,9 @@
 'use client';
 
 // Ambient particulate life, seeded per session: dust motes rising past the
-// altar, sparse stars for moon mode (they exist in both modes — the --star
-// token simply extinguishes them under the sun), and a thin mist playing at
-// the altar's base. All animation is CSS, gated in globals.css on
+// altar and sparse stars for moon mode (they exist in both modes — the
+// --star token simply extinguishes them under the sun). The ground mist
+// retired with the earth. All animation is CSS, gated in globals.css on
 // [data-motion='live'] and prefers-reduced-motion — and every amplitude is
 // ranked strictly under interactive feedback.
 
@@ -67,8 +67,6 @@ export function Dust({ seed }: { seed: string }) {
           }
         />
       ))}
-      <span className="mist mist-a" />
-      <span className="mist mist-b" />
     </div>
   );
 }
