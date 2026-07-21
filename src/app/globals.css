@@ -518,6 +518,12 @@ main[data-decode='decoding'] .tablet-text {
   transition: background-color var(--theme-fade) ease;
   pointer-events: none;
 }
+/* The unclipped bleed layer carries the lens filter (its inset comes
+   inline from TABLET.key.lens.bleedPx); .key-scene clips the bent result
+   to the pill. */
+.key-bleed {
+  position: absolute;
+}
 .key-scene-svg {
   position: absolute;
   inset: 0;

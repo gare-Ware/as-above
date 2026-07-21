@@ -43,28 +43,40 @@ function sdfRoundRect(px: number, py: number, hx: number, hy: number, r: number)
 }
 
 /** Displacement map for the lens shape (PNG data URL). Four-fold symmetry:
-    only the top-left quadrant is computed, mirrored to the rest. */
-function generateMapURL(W: number, H: number, radius: number, depth: number): string {
+    only the top-left quadrant is computed, mirrored to the rest. The lens
+    shape sits `pad` px INSIDE the map bounds (everything outside it is
+    neutral), and the map rasterizes at `dpr` so hi-dpi edges interpolate
+    cleanly instead of smearing displacement across the rim. */
+function generateMapURL(
+  W: number,
+  H: number,
+  radius: number,
+  depth: number,
+  pad: number,
+  dpr: number,
+): string {
   W = Math.max(2, Math.round(W));
   H = Math.max(2, Math.round(H));
-  const rr = Math.min(radius, W / 2, H / 2);
-  const hx = W / 2 - 1;
-  const hy = H / 2 - 1;
+  const hx = W / 2 - 1 - pad;
+  const hy = H / 2 - 1 - pad;
+  const rr = Math.min(radius, hx, hy);
+  const DW = Math.max(2, Math.round(W * dpr));
+  const DH = Math.max(2, Math.round(H * dpr));
 
   const canvas = document.createElement('canvas');
-  canvas.width = W;
-  canvas.height = H;
+  canvas.width = DW;
+  canvas.height = DH;
   const ctx = canvas.getContext('2d');
   if (!ctx) return '';
-  const img = ctx.createImageData(W, H);
+  const img = ctx.createImageData(DW, DH);
   const px = img.data;
 
-  const qw = Math.ceil(W / 2);
-  const qh = Math.ceil(H / 2);
+  const qw = Math.ceil(DW / 2);
+  const qh = Math.ceil(DH / 2);
   const eps = 0.75;
 
   const put = (X: number, Y: number, dx: number, dy: number) => {
-    const i = (Y * W + X) * 4;
+    const i = (Y * DW + X) * 4;
     px[i] = Math.round(128 + dx * 127); // R: horizontal push
     px[i + 1] = Math.round(128 + dy * 127); // G: vertical push
     px[i + 2] = 128;
@@ -73,8 +85,8 @@ function generateMapURL(W: number, H: number, radius: number, depth: number): st
 
   for (let y = 0; y < qh; y += 1) {
     for (let x = 0; x < qw; x += 1) {
-      const sx = x + 0.5 - W / 2;
-      const sy = y + 0.5 - H / 2;
+      const sx = (x + 0.5) / dpr - W / 2;
+      const sy = (y + 0.5) / dpr - H / 2;
       const d = sdfRoundRect(sx, sy, hx, hy, rr);
 
       let dx = 0;
@@ -99,9 +111,9 @@ function generateMapURL(W: number, H: number, radius: number, depth: number): st
       }
 
       put(x, y, dx, dy);
-      put(W - 1 - x, y, -dx, dy);
-      put(x, H - 1 - y, dx, -dy);
-      put(W - 1 - x, H - 1 - y, -dx, -dy);
+      put(DW - 1 - x, y, -dx, dy);
+      put(x, DH - 1 - y, dx, -dy);
+      put(DW - 1 - x, DH - 1 - y, -dx, -dy);
     }
   }
 
@@ -116,6 +128,11 @@ export interface LensOptions {
   strength: number;
   /** Per-channel scale spread (0 = no chromatic fringe). */
   chroma: number;
+  /** How far the target BLEEDS beyond the visible lens shape, px. The lens
+      SDF is inset by this much, so rim pixels always displace into painted
+      content — sampling past the source's edge composites transparent
+      black (Chromium's speckled-border artifact). */
+  pad?: number;
   /** CSS filter functions appended after the lens url() — the glass body
       grade (brightness/saturate) rides the same filter chain. */
   post?: string;
@@ -126,6 +143,7 @@ export class Lens {
   private depth: number;
   private strength: number;
   private chroma: number;
+  private pad: number;
   private post: string;
   private instId: number;
   private serial = 0;
@@ -147,6 +165,7 @@ export class Lens {
     this.depth = opts.depth;
     this.strength = opts.strength;
     this.chroma = opts.chroma;
+    this.pad = opts.pad ?? 0;
     this.post = opts.post ?? '';
     this.instId = ++instanceCount;
 
@@ -197,13 +216,21 @@ export class Lens {
     this.h = rect.height;
     this.filter.setAttribute('width', String(Math.ceil(this.w)));
     this.filter.setAttribute('height', String(Math.ceil(this.h)));
-    const url = generateMapURL(this.w, this.h, this.h / 2, this.depth);
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const url = generateMapURL(
+      this.w,
+      this.h,
+      this.h / 2 - this.pad, // the visible pill's cap radius
+      this.depth,
+      this.pad,
+      dpr,
+    );
     this.mapURL = url;
     this.mapReady = false;
     // Until the map decodes, the target stays UNFILTERED — invisible here,
     // because the copy is pixel-aligned with the field behind it (no bend
-    // beats a wrong bend). Then apply under a fresh id, and once more on
-    // the next frame for engines that rasterized early.
+    // beats a wrong bend). Then apply under a fresh id, again next frame,
+    // and once more later — iOS rasterizes early and caches by id.
     const img = new Image();
     const ready = () => {
       if (this.mapURL !== url) return; // superseded by a newer shape
@@ -212,6 +239,9 @@ export class Lens {
       requestAnimationFrame(() => {
         if (this.mapURL === url) this.apply();
       });
+      window.setTimeout(() => {
+        if (this.mapURL === url) this.apply();
+      }, 450);
     };
     img.src = url;
     img.decode().then(ready, ready);

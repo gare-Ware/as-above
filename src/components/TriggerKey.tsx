@@ -74,13 +74,14 @@ export const TriggerKey = forwardRef<
   const rings = useMemo(() => buildWaveRings(seed), [seed]);
 
   useLayoutEffect(() => {
-    const scene = sceneRef.current;
-    if (!scene) return;
+    const bleed = sceneRef.current;
+    if (!bleed) return;
     const L = TABLET.key.lens;
-    lens.current = new Lens(scene, {
+    lens.current = new Lens(bleed, {
       depth: L.depth,
       strength: L.strength,
       chroma: L.chroma,
+      pad: L.bleedPx,
       post: 'brightness(1.06) saturate(0.92)',
     });
     return () => {
@@ -179,9 +180,17 @@ export const TriggerKey = forwardRef<
       }}
     >
       {/* The bent scene: a windowed copy of the field, engine-driven, under
-          the real lens. viewBox is synced by the orchestrator. */}
-      <span ref={sceneRef} className="key-scene" aria-hidden="true">
-        <svg ref={lensRefs.svg} className="key-scene-svg" viewBox="480 900 240 84">
+          the real lens. The copy BLEEDS past the pill (the filter lives on
+          the bleed layer; this span clips the result) so rim displacement
+          always samples painted field. viewBox is synced by the
+          orchestrator over the bleed's rect. */}
+      <span className="key-scene" aria-hidden="true">
+        <span
+          ref={sceneRef}
+          className="key-bleed"
+          style={{ inset: `${-TABLET.key.lens.bleedPx}px` }}
+        >
+          <svg ref={lensRefs.svg} className="key-scene-svg" viewBox="456 876 288 132">
           <g transform="translate(600 600)">
             {[...rings].reverse().map((ring, rev) => {
               const i = rings.length - 1 - rev;
@@ -221,7 +230,8 @@ export const TriggerKey = forwardRef<
               </g>
             ))}
           </g>
-        </svg>
+          </svg>
+        </span>
       </span>
       <span className="key-tint" aria-hidden="true" />
       <span className="key-rim" aria-hidden="true" />
