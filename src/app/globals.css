@@ -520,12 +520,42 @@ main[data-decode='decoding'] .tablet-text {
 }
 /* The unclipped bleed layer carries the lens filter (its inset comes
    inline from TABLET.key.lens.bleedPx); .key-scene clips the bent result
-   to the pill. The base filter here is the glass GRADE only — function
-   filters render everywhere (WebKit included); where the lens is
-   supported, lib/lens.ts overwrites this inline with url(#lens) + grade. */
+   to the pill. It must carry NO filter at first paint: WebKit half-
+   rasterizes a CSS-filtered HTML element whose content is a live-animated
+   inline SVG — function filters included, not just url() — and caches the
+   stale half until a compositing invalidation (the press) repaints it.
+   Where the lens is supported, lib/lens.ts writes url(#lens) + grade
+   inline AFTER the map decodes; where it isn't, .key-grade paints the
+   glass body instead. */
 .key-bleed {
   position: absolute;
+}
+/* The flat-glass grade: where the lens is gated off (data-lens='flat'),
+   a painted veil stands in for brightness(1.06) saturate(0.92) — a
+   whisper of body with zero filters (see .key-bleed above). */
+.key-grade {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.07);
+  opacity: 0;
+  pointer-events: none;
+}
+.glass-key[data-lens='flat'] .key-grade {
+  opacity: 1;
+}
+/* Bisect probes (?probe=…, stamped by TriggerKey pre-paint). Diagnosis
+   only: 'filter' restores the first-paint function filter that shipped
+   the WebKit artifact; 'noclip' lifts the pill clip to test the
+   overflow+radius suspect in isolation. */
+.glass-key[data-probe='filter'] .key-bleed {
   filter: brightness(1.06) saturate(0.92);
+}
+.glass-key[data-probe='filter'] .key-grade {
+  opacity: 0;
+}
+.glass-key[data-probe='noclip'] .key-scene {
+  overflow: visible;
+  border-radius: 0;
 }
 .key-scene-svg {
   position: absolute;

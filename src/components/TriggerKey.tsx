@@ -74,13 +74,25 @@ export const TriggerKey = forwardRef<
   const rings = useMemo(() => buildWaveRings(seed), [seed]);
 
   useLayoutEffect(() => {
+    const key = keyRef.current;
     const bleed = sceneRef.current;
-    if (!bleed) return;
-    // WebKit rasterizes url() filters on HTML content unreliably — there
-    // the copy stays unfiltered (seamless: it is pixel-aligned with the
-    // field behind it) and the CSS grade on .key-bleed carries the glass
+    if (!key || !bleed) return;
+    // Bisect probes for first-load raster debugging (?probe=filter |
+    // noclip) — stamped here, pre-paint, so the probed condition exists
+    // at the very first raster like a stylesheet rule would.
+    const probe = new URLSearchParams(window.location.search).get('probe');
+    if (probe) key.dataset.probe = probe;
+    // WebKit half-rasterizes a CSS-filtered element whose content is a
+    // live-animated inline SVG on first paint — ANY filter, the function
+    // grade included, not just the url() lens. There the bleed carries no
+    // filter at all: the copy stays pixel-aligned with the field behind
+    // it (seamless) and the painted .key-grade veil carries the glass
     // body. The bend is a progressive enhancement.
-    if (!lensSupported()) return;
+    if (!lensSupported()) {
+      key.dataset.lens = 'flat';
+      return;
+    }
+    key.dataset.lens = 'bent';
     const L = TABLET.key.lens;
     lens.current = new Lens(bleed, {
       depth: L.depth,
@@ -237,6 +249,9 @@ export const TriggerKey = forwardRef<
           </g>
           </svg>
         </span>
+        {/* Flat-glass grade veil — visible only under data-lens='flat',
+            where it replaces the filter chain's brightness/saturate. */}
+        <span className="key-grade" />
       </span>
       <span className="key-tint" aria-hidden="true" />
       <span className="key-rim" aria-hidden="true" />
