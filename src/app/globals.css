@@ -199,6 +199,11 @@ body {
   height: calc(var(--stage-h) * 0.405);
   z-index: 3;
   pointer-events: none;
+  /* The halo (r=106) blurs to ~151 units, well past the 240-unit viewBox;
+     without this the blurred glow is hard-clipped at the SVG's rectangular
+     edges — a visible radiance cutoff. Let it spill (the stage clips nothing,
+     the viewport catches the rest). */
+  overflow: visible;
 }
 .sky-body {
   fill: var(--body-fill);
