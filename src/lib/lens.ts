@@ -136,6 +136,11 @@ export class Lens {
   private ro: ResizeObserver;
   private w = 0;
   private h = 0;
+  /** The map is a data-URL image that decodes ASYNC. Applying the filter
+      before it lands makes Safari rasterize with an empty map (max
+      displacement — the copy smears sideways) and cache that garbage under
+      the current id. Nothing applies until this flips true. */
+  private mapReady = false;
 
   constructor(target: HTMLElement, opts: LensOptions) {
     this.target = target;
@@ -183,26 +188,43 @@ export class Lens {
     this.dm = f.querySelectorAll('feDisplacementMap');
   }
 
-  /** Costly path: element size changed — remap and reapply. */
+  /** Costly path: element size changed — remap, decode, then apply. */
   private syncShape() {
     const rect = this.target.getBoundingClientRect();
     if (rect.width < 2 || rect.height < 2) return;
+    if (Math.abs(rect.width - this.w) < 0.5 && Math.abs(rect.height - this.h) < 0.5) return;
     this.w = rect.width;
     this.h = rect.height;
     this.filter.setAttribute('width', String(Math.ceil(this.w)));
     this.filter.setAttribute('height', String(Math.ceil(this.h)));
-    this.mapURL = generateMapURL(this.w, this.h, this.h / 2, this.depth);
-    this.apply();
+    const url = generateMapURL(this.w, this.h, this.h / 2, this.depth);
+    this.mapURL = url;
+    this.mapReady = false;
+    // Until the map decodes, the target stays UNFILTERED — invisible here,
+    // because the copy is pixel-aligned with the field behind it (no bend
+    // beats a wrong bend). Then apply under a fresh id, and once more on
+    // the next frame for engines that rasterized early.
+    const img = new Image();
+    const ready = () => {
+      if (this.mapURL !== url) return; // superseded by a newer shape
+      this.mapReady = true;
+      this.apply();
+      requestAnimationFrame(() => {
+        if (this.mapURL === url) this.apply();
+      });
+    };
+    img.src = url;
+    img.decode().then(ready, ready);
   }
 
   /** Cheap path: the press deepens the bend. */
   setStrength(s: number) {
     this.strength = s;
-    this.apply();
+    if (this.mapReady) this.apply();
   }
 
   private apply() {
-    if (!this.mapURL) return;
+    if (!this.mapURL || !this.mapReady) return;
     const img = this.feImage;
     img.setAttribute('href', this.mapURL);
     img.setAttributeNS(XLINK_NS, 'xlink:href', this.mapURL); // older Safari

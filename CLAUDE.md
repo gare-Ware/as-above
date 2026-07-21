@@ -150,8 +150,11 @@ continuous liquid motion through everything, all the time. The rules:
   feDisplacementMap lens (`src/lib/lens.ts`, the glass-demo technique:
   rounded-rect SDF map on canvas, quadrant-mirrored; sRGB
   color-interpolation or 128 isn't neutral; fresh filter id per update or
-  Safari serves stale pixels; map regen only on resize, `setStrength` is
-  the cheap path — the press deepens the bend). Painted layers above the
+  Safari serves stale pixels; the filter is NEVER applied before the map
+  image has decoded — iOS rasterizes an unloaded feImage as an empty map
+  (max displacement) and caches the smear under the current id; map regen
+  only on resize, `setStrength` is the cheap path — the press deepens the
+  bend). Painted layers above the
   bent scene are whispers: `.key-tint` (faint white, never frost) ·
   `.key-rim` (1px UNEVEN vertical-gradient ring via mask-xor — never a
   solid border) · `.key-gloss`/`.key-glint`/`.key-caps` (slim top band,

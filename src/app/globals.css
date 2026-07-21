@@ -699,6 +699,22 @@ main[data-decode='decoding'] .tablet-text {
 .console-chip:hover {
   color: var(--ink);
 }
+/* Narrow devices: the chip sheds its glass container — a text-only verb in
+   the corner (the HATCH pattern), tucked low and right so it never crowds
+   the key. Padding stays generous: the touch target is invisible, not gone. */
+@media (max-width: 640px) {
+  .console-chip {
+    background: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    box-shadow: none;
+    padding: 12px 4px;
+    bottom: max(0.35rem, env(safe-area-inset-bottom));
+    right: max(0.8rem, env(safe-area-inset-right));
+    color: color-mix(in oklab, var(--ink) 80%, transparent);
+    text-shadow: 0 1px 6px rgba(0, 0, 0, 0.35);
+  }
+}
 .console-panel {
   position: fixed;
   inset-inline: 0;
