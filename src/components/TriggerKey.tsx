@@ -68,6 +68,10 @@ export const TriggerKey = forwardRef<
   const shockRef = useRef<HTMLSpanElement>(null);
   const anim = useRef<ReturnType<typeof animate> | null>(null);
   const lens = useRef<Lens | null>(null);
+  // Once the user presses, the press itself repaints the key — pending
+  // first-paint heal kicks become no-ops (avoids any overlap with the
+  // press's own transform animation).
+  const interacted = useRef(false);
 
   // Same seed, same pure generator, same sea — the copy is identical to
   // the field behind the key, so at rest the seam is invisible.
@@ -107,9 +111,87 @@ export const TriggerKey = forwardRef<
     };
   }, []);
 
+  // First-paint raster heal. iOS WebKit rasterizes the clipped SVG copy
+  // HALF-BAKED on first paint (one half shows the field, the other the bare
+  // --wave-edge) and caches that tile until a compositing invalidation
+  // repaints it — historically the user's first press, which transforms the
+  // key. The engine has been writing correct geometry to the copy every
+  // frame the whole time; nothing is wrong but the cached tile. So we force
+  // that invalidation ourselves, a few times, once layout + fonts + the
+  // lens-window viewBox (synced by the orchestrator at boot and ~950ms) have
+  // settled: toggling a compositing layer on the clipped container drops and
+  // re-rasterizes exactly that tile with its now-ready content. Invisible
+  // where the bug doesn't occur — a no-op repaint ~1s in.
+  //   ?fix=nokick — disable (baseline A/B)   ?fix=layer — leave the layer
+  //   promoted instead of toggling           ?debug — on-device state readout
+  useLayoutEffect(() => {
+    const key = keyRef.current;
+    const scene = key?.querySelector<HTMLElement>('.key-scene');
+    if (!key || !scene) return;
+    const params = new URLSearchParams(window.location.search);
+    const fix = params.get('fix'); // null | 'nokick' | 'layer'
+    const debug = params.get('debug') !== null;
+    let kicks = 0;
+
+    const paintDebug = () => {
+      if (!debug) return;
+      let box = document.getElementById('key-debug');
+      if (!box) {
+        box = document.createElement('div');
+        box.id = 'key-debug';
+        box.style.cssText =
+          'position:fixed;top:8px;left:8px;z-index:9999;max-width:92vw;' +
+          'font:11px/1.35 ui-monospace,monospace;color:#fff;white-space:pre-wrap;' +
+          'background:rgba(0,0,0,.72);padding:6px 8px;border-radius:6px;pointer-events:none;';
+        document.body.appendChild(box);
+      }
+      const bleed = key.querySelector<HTMLElement>('.key-bleed');
+      const grade = key.querySelector<HTMLElement>('.key-grade');
+      box.textContent = [
+        `sup=${lensSupported()} lens=${key.dataset.lens ?? '-'} probe=${key.dataset.probe ?? '-'} fix=${fix ?? '-'}`,
+        `filter=${bleed ? getComputedStyle(bleed).filter : '-'}`,
+        `grade=${grade ? getComputedStyle(grade).opacity : '-'} kicks=${kicks} defsFilters=${document.querySelectorAll('body>svg filter').length}`,
+        `ua=${navigator.userAgent}`,
+      ].join('\n');
+    };
+
+    let raf = 0;
+    const kick = () => {
+      if (interacted.current) return; // a press already repainted the key
+      // Transform the KEY itself — the exact element the healing press
+      // transforms — so its clipped SVG child repaints in-layer, not on a
+      // freshly-promoted layer of its own. translateZ(0) is visually
+      // identity: the change repaints, the value moves nothing. The drop
+      // (next frame) leaves the post-press state. ?fix=layer keeps it on.
+      key.style.transform = 'translateZ(0)';
+      void key.offsetHeight; // flush the style/layout change
+      kicks += 1;
+      if (fix === 'layer') {
+        paintDebug();
+        return;
+      }
+      raf = requestAnimationFrame(() => {
+        key.style.transform = '';
+        paintDebug();
+      });
+    };
+
+    const timers =
+      fix === 'nokick' ? [] : [220, 620, 1080].map((ms) => window.setTimeout(kick, ms));
+    paintDebug();
+
+    return () => {
+      timers.forEach((t) => window.clearTimeout(t));
+      cancelAnimationFrame(raf);
+      key.style.transform = '';
+      document.getElementById('key-debug')?.remove();
+    };
+  }, []);
+
   function press(atX?: number, atY?: number) {
     const key = keyRef.current;
     if (!key) return;
+    interacted.current = true;
     anim.current?.stop();
     key.dataset.pressed = 'true';
     // Explicit from→to keyframes: letting WAAPI read the "current" transform
