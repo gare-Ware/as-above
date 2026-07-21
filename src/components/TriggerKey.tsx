@@ -27,7 +27,7 @@ import {
   type RefObject,
 } from 'react';
 import { animate } from 'motion';
-import { Lens } from '@/lib/lens';
+import { Lens, lensSupported } from '@/lib/lens';
 import { KEY_RELEASE } from '@/lib/motion';
 import { TABLET } from '@/lib/tablet';
 import { buildWaveRings } from './Waves';
@@ -76,6 +76,11 @@ export const TriggerKey = forwardRef<
   useLayoutEffect(() => {
     const bleed = sceneRef.current;
     if (!bleed) return;
+    // WebKit rasterizes url() filters on HTML content unreliably — there
+    // the copy stays unfiltered (seamless: it is pixel-aligned with the
+    // field behind it) and the CSS grade on .key-bleed carries the glass
+    // body. The bend is a progressive enhancement.
+    if (!lensSupported()) return;
     const L = TABLET.key.lens;
     lens.current = new Lens(bleed, {
       depth: L.depth,

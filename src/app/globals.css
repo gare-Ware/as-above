@@ -520,9 +520,12 @@ main[data-decode='decoding'] .tablet-text {
 }
 /* The unclipped bleed layer carries the lens filter (its inset comes
    inline from TABLET.key.lens.bleedPx); .key-scene clips the bent result
-   to the pill. */
+   to the pill. The base filter here is the glass GRADE only — function
+   filters render everywhere (WebKit included); where the lens is
+   supported, lib/lens.ts overwrites this inline with url(#lens) + grade. */
 .key-bleed {
   position: absolute;
+  filter: brightness(1.06) saturate(0.92);
 }
 .key-scene-svg {
   position: absolute;

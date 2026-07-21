@@ -14,9 +14,33 @@
 // Cross-browser per the article: color-interpolation-filters="sRGB" (in
 // linearRGB 128 is NOT neutral and the whole element drifts), and Safari
 // caches filter output by ID, so every update assigns a fresh one.
+//
+// EXCEPT WebKit. Real devices (every iOS browser is WebKit) rasterize
+// url() SVG filters on HTML content unreliably on first load — half-drawn
+// or empty output, unrecoverable by re-stamping ids. The bend is therefore
+// a PROGRESSIVE ENHANCEMENT: lensSupported() gates WebKit off entirely,
+// which degrades seamlessly because the copy under the lens is pixel-
+// aligned with the field behind it (no bend, no seam — still clear glass
+// over the live scene). ?lens=force re-enables for device testing.
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const XLINK_NS = 'http://www.w3.org/1999/xlink';
+
+/** True where the displacement lens is trustworthy. WebKit — Safari on any
+    platform, every iOS browser (CriOS/EdgiOS/FxiOS are WebKit shells), and
+    iPadOS masquerading as macOS — is not: url() SVG filters on HTML
+    content ship half-rasterized on first paint. */
+export function lensSupported(): boolean {
+  if (typeof window === 'undefined') return false;
+  if (new URLSearchParams(window.location.search).get('lens') === 'force') return true;
+  const ua = navigator.userAgent;
+  const safari =
+    /AppleWebKit/.test(ua) && !/Chrome\//.test(ua) && !/Edg\//.test(ua) && !/OPR\//.test(ua);
+  const iosFamily =
+    /iP(hone|ad|od)|CriOS|EdgiOS|FxiOS/.test(ua) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  return !(safari || iosFamily);
+}
 
 let instanceCount = 0;
 let defsSvg: SVGSVGElement | null = null;

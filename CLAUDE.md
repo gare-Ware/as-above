@@ -154,7 +154,14 @@ continuous liquid motion through everything, all the time. The rules:
   image has decoded — iOS rasterizes an unloaded feImage as an empty map
   (max displacement) and caches the smear under the current id; map regen
   only on resize, `setStrength` is the cheap path — the press deepens the
-  bend). Painted layers above the
+  bend). The bend is a PROGRESSIVE ENHANCEMENT: WebKit (Safari anywhere +
+  every iOS browser) rasterizes url() SVG filters on HTML content
+  unreliably on first paint (half-drawn/empty, re-stamping does not heal
+  it), so `lensSupported()` gates it off there — degrading seamlessly to
+  the unfiltered copy (pixel-aligned = no seam; a CSS function-filter
+  grade on `.key-bleed` keeps the glass body). `?lens=force` re-enables
+  for device testing. Do NOT trust Playwright WebKit for lens work: its
+  port renders NO url() filters at all. Painted layers above the
   bent scene are whispers: `.key-tint` (faint white, never frost) ·
   `.key-rim` (1px UNEVEN vertical-gradient ring via mask-xor — never a
   solid border) · `.key-gloss`/`.key-glint`/`.key-caps` (slim top band,
