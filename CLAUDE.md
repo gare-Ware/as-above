@@ -142,8 +142,9 @@ continuous liquid motion through everything, all the time. The rules:
   flat disc + white-hot core gradient; the moon a bare pearl + limb shading
   + fog veils. The console is themed liquid glass (`--glass-*`); the
   TRIGGER key is the HERO — deliberately UNTHEMED, and REAL liquid glass:
-  a wide pill that samples no backdrop at all. It holds a pixel-aligned
-  windowed COPY of the wave field (`buildWaveRings(seed)` — same seed,
+  a wide pill whose enhanced path samples no backdrop at all. It holds a
+  pixel-aligned windowed COPY of the wave field (`buildWaveRings(seed)` —
+  same seed,
   same geometry; the engine dual-writes every crest scale and ripple
   transform to both trees; `syncLensWindow` aims its viewBox, re-aimed
   after the stage entrance and on resize) and BENDS it with a true
@@ -154,7 +155,15 @@ continuous liquid motion through everything, all the time. The rules:
   image has decoded — iOS rasterizes an unloaded feImage as an empty map
   (max displacement) and caches the smear under the current id; map regen
   only on resize, `setStrength` is the cheap path — the press deepens the
-  bend). Painted layers above the
+  bend). The bend is a PROGRESSIVE ENHANCEMENT: WebKit (Safari anywhere +
+  every iOS browser) rasterizes url() SVG filters on HTML content
+  unreliably on first paint (half-drawn/empty, re-stamping does not heal
+  it), so `lensSupported()` positively allows only Chromium. Until that
+  support decision, the duplicate SVG is not mounted at all; the flat path
+  never inserts it on WebKit and instead exposes the real field through the
+  transparent key. A painted `.key-grade` keeps the glass body.
+  `?lens=force` re-enables for device testing. Do NOT trust Playwright
+  WebKit for lens work: its port renders NO url() filters at all. Painted layers above the
   bent scene are whispers: `.key-tint` (faint white, never frost) ·
   `.key-rim` (1px UNEVEN vertical-gradient ring via mask-xor — never a
   solid border) · `.key-gloss`/`.key-glint`/`.key-caps` (slim top band,

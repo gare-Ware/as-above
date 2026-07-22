@@ -473,11 +473,13 @@ main[data-decode='decoding'] .tablet-text {
   transition-delay: 1.4s;
 }
 
-/* ── The TRIGGER — REAL liquid glass, the app's hero. It does not sample
-   its backdrop at all: it holds a pixel-aligned windowed COPY of the wave
-   field (same seed, driven by the same engine) and BENDS it with a true
-   feDisplacementMap lens (lib/lens.ts, the glass-demo technique). The
-   painted layers above the bent scene are whispers: a faint tint, a
+/* ── The TRIGGER — REAL liquid glass, the app's hero. Chromium holds a
+   pixel-aligned windowed COPY of the wave field (same seed, driven by the
+   same engine) and BENDS it with a true feDisplacementMap lens
+   (lib/lens.ts, the glass-demo technique). The
+   WebKit fallback is a clear window onto the real field: no duplicate SVG
+   raster surface, no filter, and therefore no first-paint tile to corrupt.
+   The painted layers above the bent scene are whispers: a faint tint, a
    hairline uneven rim, a slim gloss — never a solid border, never frost. ── */
 .key-zone {
   position: absolute;
@@ -500,7 +502,7 @@ main[data-decode='decoding'] .tablet-text {
   cursor: pointer;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
-  background: none; /* the bent scene copy IS the body */
+  background: none; /* the bent scene or clear fallback IS the body */
   box-shadow:
     0 22px 44px -14px rgba(0, 0, 0, 0.5),
     0 4px 14px rgba(0, 0, 0, 0.2),
@@ -514,9 +516,30 @@ main[data-decode='decoding'] .tablet-text {
   inset: 0;
   border-radius: inherit;
   overflow: hidden;
-  background: var(--wave-edge);
-  transition: background-color var(--theme-fade) ease;
+  background: transparent;
   pointer-events: none;
+}
+/* The unclipped bleed layer carries the Chromium lens filter (its inset
+   comes inline from TABLET.key.lens.bleedPx); .key-scene clips the bent
+   result to the pill. lib/lens.ts applies the filter only after its map
+   decodes. */
+.key-bleed {
+  position: absolute;
+}
+/* A painted veil replaces the lens filter's brightness/saturate grade. It
+   is already present while support is pending; WebKit never receives a
+   .key-scene node to rasterize, even momentarily. */
+.key-grade {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: rgba(255, 255, 255, 0.07);
+  opacity: 0;
+  pointer-events: none;
+}
+.glass-key[data-lens='pending'] .key-grade,
+.glass-key[data-lens='flat'] .key-grade {
+  opacity: 1;
 }
 .key-scene-svg {
   position: absolute;

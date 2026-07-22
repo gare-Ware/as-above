@@ -134,7 +134,10 @@ export const TABLET = {
   key: {
     travelPx: 3,
     pressMs: 45,
-    lens: { depth: 26, strength: 60, chroma: 0.12, pressBoost: 1.45 },
+    /** bleedPx: how far the field copy paints beyond the visible pill —
+        rim displacement must never sample past the source's edge (that
+        composites transparent black: Chromium's speckled border). */
+    lens: { depth: 26, strength: 60, chroma: 0.12, pressBoost: 1.45, bleedPx: 24 },
   },
 
   /** ORACLE — AUTO: the tablet re-decodes on its own after this much idle. */
