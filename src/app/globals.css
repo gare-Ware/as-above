@@ -526,13 +526,9 @@ main[data-decode='decoding'] .tablet-text {
 .key-bleed {
   position: absolute;
 }
-/* WebKit's flat-glass path never paints the duplicated live SVG. The real
-   field already sits directly behind this transparent key, so hiding the
-   copy is both pixel-perfect and immune to WebKit's stale clipped tiles. */
-.glass-key[data-lens='flat'] .key-scene {
-  display: none;
-}
-/* A painted veil replaces the lens filter's brightness/saturate grade. */
+/* A painted veil replaces the lens filter's brightness/saturate grade. It
+   is already present while support is pending; WebKit never receives a
+   .key-scene node to rasterize, even momentarily. */
 .key-grade {
   position: absolute;
   inset: 0;
@@ -541,6 +537,7 @@ main[data-decode='decoding'] .tablet-text {
   opacity: 0;
   pointer-events: none;
 }
+.glass-key[data-lens='pending'] .key-grade,
 .glass-key[data-lens='flat'] .key-grade {
   opacity: 1;
 }

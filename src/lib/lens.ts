@@ -27,22 +27,21 @@
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const XLINK_NS = 'http://www.w3.org/1999/xlink';
 
-/** True where the displacement lens is trustworthy. WebKit — Safari on any
-    platform, every iOS browser (CriOS/EdgiOS/FxiOS are WebKit shells), and
-    iPadOS masquerading as macOS — is not: url() SVG filters on HTML
-    content ship half-rasterized on first paint. */
+/** Progressive enhancement uses a positive allow-list: only desktop/Android
+    Chromium is trusted with this filter path. Safari, every iOS browser,
+    Firefox, and unknown engines take the structurally flat fallback. */
+export function lensSupportedForUserAgent(ua: string): boolean {
+  const chromium = /\b(?:Chrome|Chromium|Edg|OPR)\//.test(ua);
+  const iosShell = /iP(hone|ad|od)|CriOS|EdgiOS|FxiOS|OPiOS/.test(ua);
+  return chromium && !iosShell;
+}
+
 export function lensSupported(): boolean {
   if (typeof window === 'undefined') return false;
   const override = new URLSearchParams(window.location.search).get('lens');
   if (override === 'force') return true;
   if (override === 'flat') return false;
-  const ua = navigator.userAgent;
-  const safari =
-    /AppleWebKit/.test(ua) && !/Chrome\//.test(ua) && !/Edg\//.test(ua) && !/OPR\//.test(ua);
-  const iosFamily =
-    /iP(hone|ad|od)|CriOS|EdgiOS|FxiOS/.test(ua) ||
-    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-  return !(safari || iosFamily);
+  return lensSupportedForUserAgent(navigator.userAgent);
 }
 
 let instanceCount = 0;

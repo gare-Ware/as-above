@@ -23,8 +23,8 @@ test('WebKit glass fallback never paints the duplicated live SVG', async ({ page
 
   const key = page.getByRole('button', { name: /trigger/i });
   await expect(key).toHaveAttribute('data-lens', 'flat');
-  await expect(key.locator('.key-scene')).toHaveCSS('display', 'none');
-  await expect(key.locator('.key-bleed')).toHaveCSS('filter', 'none');
+  await expect(key.locator('.key-scene')).toHaveCount(0);
+  await expect(key.locator('.key-bleed')).toHaveCount(0);
   await expect(key.locator('.key-grade')).toHaveCSS('opacity', '1');
 
   // The fallback must be correct before the interaction that historically

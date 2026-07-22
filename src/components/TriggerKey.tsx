@@ -25,6 +25,7 @@ import {
   useLayoutEffect,
   useMemo,
   useRef,
+  useState,
   type PointerEvent as ReactPointerEvent,
   type RefObject,
 } from 'react';
@@ -45,6 +46,8 @@ export interface LensRefs {
   rings: RefObject<(SVGPathElement | null)[]>;
   pulses: RefObject<(SVGGElement | null)[]>;
 }
+
+type LensMode = 'pending' | 'flat' | 'bent';
 
 /** The emblem: an equilateral triangle, its exact incircle, and the
     triangle inscribed in THAT — the cover's nesting, three strokes. */
@@ -70,25 +73,23 @@ export const TriggerKey = forwardRef<
   const shockRef = useRef<HTMLSpanElement>(null);
   const anim = useRef<ReturnType<typeof animate> | null>(null);
   const lens = useRef<Lens | null>(null);
+  const [lensMode, setLensMode] = useState<LensMode>('pending');
 
   // Same seed, same pure generator, same sea — the copy is identical to
   // the field behind the key, so at rest the seam is invisible.
   const rings = useMemo(() => buildWaveRings(seed), [seed]);
 
   useLayoutEffect(() => {
-    const key = keyRef.current;
+    // Decide before the browser's first paint of this client-only scene.
+    // Until then the copy is not mounted, so production's single effect pass
+    // cannot expose WebKit to even one raster of the fragile inline SVG.
+    setLensMode(lensSupported() ? 'bent' : 'flat');
+  }, []);
+
+  useLayoutEffect(() => {
+    if (lensMode !== 'bent') return;
     const bleed = sceneRef.current;
-    if (!key || !bleed) return;
-    // WebKit can cache a half-rasterized tile for a clipped, live inline SVG
-    // on first paint, even with the url() filter gated off. Do not ask it to
-    // paint the duplicate at all: data-lens='flat' hides the scene copy and
-    // the clear key reveals the real wave field directly. The painted grade
-    // keeps the same glass body. The bend remains a progressive enhancement.
-    if (!lensSupported()) {
-      key.dataset.lens = 'flat';
-      return;
-    }
-    key.dataset.lens = 'bent';
+    if (!bleed) return;
     const L = TABLET.key.lens;
     lens.current = new Lens(bleed, {
       depth: L.depth,
@@ -101,7 +102,7 @@ export const TriggerKey = forwardRef<
       lens.current?.destroy();
       lens.current = null;
     };
-  }, []);
+  }, [lensMode]);
 
   function press(atX?: number, atY?: number) {
     const key = keyRef.current;
@@ -180,6 +181,7 @@ export const TriggerKey = forwardRef<
       ref={keyRef}
       type="button"
       className="glass-key"
+      data-lens={lensMode}
       data-pressed="false"
       aria-label="Trigger — the tablet answers"
       onPointerDown={onPointerDown}
@@ -192,67 +194,66 @@ export const TriggerKey = forwardRef<
         if (e.key === 'Enter' || e.key === ' ') e.preventDefault();
       }}
     >
-      {/* The bent scene: a windowed copy of the field, engine-driven, under
-          the real lens. The copy BLEEDS past the pill (the filter lives on
-          the bleed layer; this span clips the result) so rim displacement
-          always samples painted field. viewBox is synced by the
-          orchestrator over the bleed's rect. */}
-      <span className="key-scene" aria-hidden="true">
-        <span
-          ref={sceneRef}
-          className="key-bleed"
-          style={{ inset: `${-TABLET.key.lens.bleedPx}px` }}
-        >
-          <svg
-            ref={lensRefs.svg}
-            className="key-scene-svg"
-            viewBox="456 876 288 132"
-            preserveAspectRatio="none"
+      {lensMode === 'bent' && (
+        <span className="key-scene" aria-hidden="true">
+          {/* The bent scene is mounted only after Chromium support is known.
+              The copy BLEEDS past the pill so rim displacement always samples
+              painted field; the orchestrator syncs its viewBox to this rect. */}
+          <span
+            ref={sceneRef}
+            className="key-bleed"
+            style={{ inset: `${-TABLET.key.lens.bleedPx}px` }}
           >
-            <g transform="translate(600 600)">
-              {[...rings].reverse().map((ring, rev) => {
-                const i = rings.length - 1 - rev;
-                return (
-                  <path
-                    key={i}
+            <svg
+              ref={lensRefs.svg}
+              className="key-scene-svg"
+              viewBox="456 876 288 132"
+              preserveAspectRatio="none"
+            >
+              <g transform="translate(600 600)">
+                {[...rings].reverse().map((ring, rev) => {
+                  const i = rings.length - 1 - rev;
+                  return (
+                    <path
+                      key={i}
+                      ref={(el) => {
+                        lensRefs.rings.current[i] = el;
+                      }}
+                      d={ring.d}
+                      className="wave-ring"
+                      style={{
+                        fill: `color-mix(in oklab, var(--wave-root) ${ring.mix}%, var(--wave-edge))`,
+                      }}
+                    />
+                  );
+                })}
+                {Array.from({ length: TABLET.waves.pulse.pool }, (_, p) => (
+                  <g
+                    key={p}
                     ref={(el) => {
-                      lensRefs.rings.current[i] = el;
+                      lensRefs.pulses.current[p] = el;
                     }}
-                    d={ring.d}
-                    className="wave-ring"
-                    style={{
-                      fill: `color-mix(in oklab, var(--wave-root) ${ring.mix}%, var(--wave-edge))`,
-                    }}
-                  />
-                );
-              })}
-              {Array.from({ length: TABLET.waves.pulse.pool }, (_, p) => (
-                <g
-                  key={p}
-                  ref={(el) => {
-                    lensRefs.pulses.current[p] = el;
-                  }}
-                  opacity={0}
-                >
-                  <circle
-                    r={TABLET.waves.innerRadius * 0.9}
-                    className="wave-pulse wave-pulse-echo"
-                    vectorEffect="non-scaling-stroke"
-                    opacity={TABLET.waves.pulse.echoOpacity}
-                  />
-                  <circle
-                    r={TABLET.waves.innerRadius}
-                    className="wave-pulse"
-                    vectorEffect="non-scaling-stroke"
-                  />
-                </g>
-              ))}
-            </g>
-          </svg>
+                    opacity={0}
+                  >
+                    <circle
+                      r={TABLET.waves.innerRadius * 0.9}
+                      className="wave-pulse wave-pulse-echo"
+                      vectorEffect="non-scaling-stroke"
+                      opacity={TABLET.waves.pulse.echoOpacity}
+                    />
+                    <circle
+                      r={TABLET.waves.innerRadius}
+                      className="wave-pulse"
+                      vectorEffect="non-scaling-stroke"
+                    />
+                  </g>
+                ))}
+              </g>
+            </svg>
+          </span>
         </span>
-      </span>
-      {/* Flat-glass grade veil — outside .key-scene because the WebKit
-          fallback removes that entire duplicate SVG raster surface. */}
+      )}
+      {/* Flat-glass grade veil — WebKit never mounts .key-scene at all. */}
       <span className="key-grade" aria-hidden="true" />
       <span className="key-tint" aria-hidden="true" />
       <span className="key-rim" aria-hidden="true" />
