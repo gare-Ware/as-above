@@ -16,6 +16,22 @@ async function pressTrigger(page) {
 const settled = (page) =>
   page.waitForSelector('main[data-decode="settled"]', { timeout: 5_000 });
 
+test('WebKit glass fallback never paints the duplicated live SVG', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 720 });
+  await page.goto('/?lens=flat');
+  await ready(page);
+
+  const key = page.getByRole('button', { name: /trigger/i });
+  await expect(key).toHaveAttribute('data-lens', 'flat');
+  await expect(key.locator('.key-scene')).toHaveCSS('display', 'none');
+  await expect(key.locator('.key-bleed')).toHaveCSS('filter', 'none');
+  await expect(key.locator('.key-grade')).toHaveCSS('opacity', '1');
+
+  // The fallback must be correct before the interaction that historically
+  // forced WebKit to repaint the corrupt half-tile.
+  await expect(key).toHaveAttribute('data-pressed', 'false');
+});
+
 test('TRIGGER reveals a fact; repeated presses cycle new ones with zero cooldown', async ({
   page,
 }) => {

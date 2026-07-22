@@ -19,9 +19,10 @@
 // url() SVG filters on HTML content unreliably on first load — half-drawn
 // or empty output, unrecoverable by re-stamping ids. The bend is therefore
 // a PROGRESSIVE ENHANCEMENT: lensSupported() gates WebKit off entirely,
-// which degrades seamlessly because the copy under the lens is pixel-
-// aligned with the field behind it (no bend, no seam — still clear glass
-// over the live scene). ?lens=force re-enables for device testing.
+// which degrades seamlessly by removing the copy and exposing the real
+// field through the clear key (no bend, no seam). ?lens=force re-enables
+// the refracted copy for device testing and
+// ?lens=flat exercises the fallback in any browser.
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const XLINK_NS = 'http://www.w3.org/1999/xlink';
@@ -32,7 +33,9 @@ const XLINK_NS = 'http://www.w3.org/1999/xlink';
     content ship half-rasterized on first paint. */
 export function lensSupported(): boolean {
   if (typeof window === 'undefined') return false;
-  if (new URLSearchParams(window.location.search).get('lens') === 'force') return true;
+  const override = new URLSearchParams(window.location.search).get('lens');
+  if (override === 'force') return true;
+  if (override === 'flat') return false;
   const ua = navigator.userAgent;
   const safari =
     /AppleWebKit/.test(ua) && !/Chrome\//.test(ua) && !/Edg\//.test(ua) && !/OPR\//.test(ua);

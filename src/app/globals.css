@@ -473,11 +473,13 @@ main[data-decode='decoding'] .tablet-text {
   transition-delay: 1.4s;
 }
 
-/* ── The TRIGGER — REAL liquid glass, the app's hero. It does not sample
-   its backdrop at all: it holds a pixel-aligned windowed COPY of the wave
-   field (same seed, driven by the same engine) and BENDS it with a true
-   feDisplacementMap lens (lib/lens.ts, the glass-demo technique). The
-   painted layers above the bent scene are whispers: a faint tint, a
+/* ── The TRIGGER — REAL liquid glass, the app's hero. Chromium holds a
+   pixel-aligned windowed COPY of the wave field (same seed, driven by the
+   same engine) and BENDS it with a true feDisplacementMap lens
+   (lib/lens.ts, the glass-demo technique). The
+   WebKit fallback is a clear window onto the real field: no duplicate SVG
+   raster surface, no filter, and therefore no first-paint tile to corrupt.
+   The painted layers above the bent scene are whispers: a faint tint, a
    hairline uneven rim, a slim gloss — never a solid border, never frost. ── */
 .key-zone {
   position: absolute;
@@ -500,7 +502,7 @@ main[data-decode='decoding'] .tablet-text {
   cursor: pointer;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
-  background: none; /* the bent scene copy IS the body */
+  background: none; /* the bent scene or clear fallback IS the body */
   box-shadow:
     0 22px 44px -14px rgba(0, 0, 0, 0.5),
     0 4px 14px rgba(0, 0, 0, 0.2),
@@ -514,48 +516,33 @@ main[data-decode='decoding'] .tablet-text {
   inset: 0;
   border-radius: inherit;
   overflow: hidden;
-  background: var(--wave-edge);
-  transition: background-color var(--theme-fade) ease;
+  background: transparent;
   pointer-events: none;
 }
-/* The unclipped bleed layer carries the lens filter (its inset comes
-   inline from TABLET.key.lens.bleedPx); .key-scene clips the bent result
-   to the pill. It must carry NO filter at first paint: WebKit half-
-   rasterizes a CSS-filtered HTML element whose content is a live-animated
-   inline SVG — function filters included, not just url() — and caches the
-   stale half until a compositing invalidation (the press) repaints it.
-   Where the lens is supported, lib/lens.ts writes url(#lens) + grade
-   inline AFTER the map decodes; where it isn't, .key-grade paints the
-   glass body instead. */
+/* The unclipped bleed layer carries the Chromium lens filter (its inset
+   comes inline from TABLET.key.lens.bleedPx); .key-scene clips the bent
+   result to the pill. lib/lens.ts applies the filter only after its map
+   decodes. */
 .key-bleed {
   position: absolute;
 }
-/* The flat-glass grade: where the lens is gated off (data-lens='flat'),
-   a painted veil stands in for brightness(1.06) saturate(0.92) — a
-   whisper of body with zero filters (see .key-bleed above). */
+/* WebKit's flat-glass path never paints the duplicated live SVG. The real
+   field already sits directly behind this transparent key, so hiding the
+   copy is both pixel-perfect and immune to WebKit's stale clipped tiles. */
+.glass-key[data-lens='flat'] .key-scene {
+  display: none;
+}
+/* A painted veil replaces the lens filter's brightness/saturate grade. */
 .key-grade {
   position: absolute;
   inset: 0;
+  border-radius: inherit;
   background: rgba(255, 255, 255, 0.07);
   opacity: 0;
   pointer-events: none;
 }
 .glass-key[data-lens='flat'] .key-grade {
   opacity: 1;
-}
-/* Bisect probes (?probe=…, stamped by TriggerKey pre-paint). Diagnosis
-   only: 'filter' restores the first-paint function filter that shipped
-   the WebKit artifact; 'noclip' lifts the pill clip to test the
-   overflow+radius suspect in isolation. */
-.glass-key[data-probe='filter'] .key-bleed {
-  filter: brightness(1.06) saturate(0.92);
-}
-.glass-key[data-probe='filter'] .key-grade {
-  opacity: 0;
-}
-.glass-key[data-probe='noclip'] .key-scene {
-  overflow: visible;
-  border-radius: 0;
 }
 .key-scene-svg {
   position: absolute;
