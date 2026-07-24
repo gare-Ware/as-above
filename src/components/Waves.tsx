@@ -6,10 +6,13 @@
 // the whole sea glides on a mode flip). This component supplies geometry
 // only; the engine (AsAboveApp) writes one scale per ring — a phase-lagged
 // radial oscillation that reads as crests traveling outward forever, with no
-// respawn seam — and drives the ripple fronts through the same field: each
-// pulse slot is a two-circle group (bright leading edge + thick faint echo —
-// glow with zero filters) the engine positions at the fire's ORIGIN (the key
-// for a press, the body for a swap) and expands across the whole sea.
+// respawn seam — and carries the ripple IN the rings themselves: each ring
+// group holds its base path plus a WASH twin (same wobble geometry, filled
+// with the body's light, opacity 0) that the engine brightens as the unseen
+// front crosses its radius — the shock is the field lighting up, ring by
+// ring, not a shape drawn over it. The wash twin owns fill statically (CSS,
+// so it glides on a mode flip); the engine owns only its opacity — no
+// per-frame fill writes ever fight the --theme-fade transition.
 // Fills are flat and unfiltered on purpose: this SVG repaints every frame.
 
 import { useMemo, type RefObject } from 'react';
@@ -18,8 +21,10 @@ import { TABLET } from '@/lib/tablet';
 
 export interface WavesRefs {
   svg: RefObject<SVGSVGElement | null>;
-  rings: RefObject<(SVGPathElement | null)[]>;
-  pulses: RefObject<(SVGGElement | null)[]>;
+  /** One group per ring (base path + wash twin) — the engine scales the group. */
+  rings: RefObject<(SVGGElement | null)[]>;
+  /** The wash twins — the engine writes only opacity (the ripple's light). */
+  washes: RefObject<(SVGPathElement | null)[]>;
   radii: RefObject<number[]>;
 }
 
@@ -85,45 +90,36 @@ export function Waves({ seed, refs }: { seed: string; refs: WavesRefs }) {
       shapeRendering="optimizeSpeed"
     >
       <g transform="translate(600 600)">
-        {/* Painted outermost-first so each smaller ring sits on top. */}
+        {/* Painted outermost-first so each smaller ring sits on top. The wash
+            twin rides INSIDE its ring's group: same geometry, same scale, so
+            the light and the heave are one motion. */}
         {[...rings].reverse().map((ring, rev) => {
           const i = rings.length - 1 - rev;
           return (
-            <path
+            <g
               key={i}
               ref={(el) => {
                 refs.rings.current[i] = el;
               }}
-              d={ring.d}
-              className="wave-ring"
-              style={{
-                fill: `color-mix(in oklab, var(--wave-root) ${ring.mix}%, var(--wave-edge))`,
-              }}
-            />
+            >
+              <path
+                d={ring.d}
+                className="wave-ring"
+                style={{
+                  fill: `color-mix(in oklab, var(--wave-root) ${ring.mix}%, var(--wave-edge))`,
+                }}
+              />
+              <path
+                d={ring.d}
+                className="wave-wash"
+                opacity={0}
+                ref={(el) => {
+                  refs.washes.current[i] = el;
+                }}
+              />
+            </g>
           );
         })}
-        {Array.from({ length: TABLET.waves.pulse.pool }, (_, p) => (
-          <g
-            key={p}
-            ref={(el) => {
-              refs.pulses.current[p] = el;
-            }}
-            opacity={0}
-          >
-            {/* Trailing echo first (beneath), leading edge on top. */}
-            <circle
-              r={TABLET.waves.innerRadius * 0.9}
-              className="wave-pulse wave-pulse-echo"
-              vectorEffect="non-scaling-stroke"
-              opacity={TABLET.waves.pulse.echoOpacity}
-            />
-            <circle
-              r={TABLET.waves.innerRadius}
-              className="wave-pulse"
-              vectorEffect="non-scaling-stroke"
-            />
-          </g>
-        ))}
       </g>
     </svg>
   );

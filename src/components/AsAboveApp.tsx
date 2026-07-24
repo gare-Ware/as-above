@@ -32,16 +32,15 @@ import { Waves, type WavesRefs } from './Waves';
 
 type DecodePhase = 'idle' | 'decoding' | 'settled';
 
-/** One ripple in flight: progress, origin (svg units, relative to the body
-    center), the per-ring crossing distances, and whether its front has
-    reached the body yet (the flare trigger). q ≥ 1 = idle slot. */
+/** One ripple in flight: born at the body's center once its wait (the gulp
+    overlap) runs out, gliding to rest on stopU — the terminal ring, measured
+    at fire. q ≥ 1 with no wait = idle slot. */
 interface Pulse {
   q: number;
-  dx: number;
-  dy: number;
-  bodyDist: number;
-  hit: number[];
-  flared: boolean;
+  /** ms until birth — the ripple waits out most of the gulp. */
+  wait: number;
+  /** The terminal radius: the first ring past the tablet's bottom edge. */
+  stopU: number;
 }
 
 interface EngineState {
@@ -52,24 +51,24 @@ interface EngineState {
   /** ONE swell drives the gem's glow surge AND the wave amplitude — the
       coherence spine: everything answers the same breath. */
   swell: number;
-  /** The ripple's arrival at the body: halo + rays surge, then decay. */
+  /** The ripple's birth at the body: halo + rays surge, then decay. */
   flare: number;
   pulses: Pulse[];
   /** Per-ring ripple kick, rebuilt each frame (preallocated, no GC churn). */
   kicks: number[];
+  /** Per-ring wash — the shock carried IN the field: each ring flushes
+      toward the body's light as the front crosses it. washPrev mirrors the
+      last written opacity so idle frames skip the DOM entirely. */
+  wash: number[];
+  washPrev: number[];
+  /** performance.now() of the last fire — the gulp envelope's birth. */
+  gulpStart: number;
   decode: { plan: ReturnType<typeof planDecode>; start: number } | null;
   lastText: [string, string, string];
   idleEpoch: number;
 }
 
-const idlePulse = (): Pulse => ({
-  q: 1,
-  dx: 0,
-  dy: 0,
-  bodyDist: 0,
-  hit: [],
-  flared: true,
-});
+const idlePulse = (): Pulse => ({ q: 1, wait: 0, stopU: 0 });
 
 const TAU = Math.PI * 2;
 const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
@@ -114,19 +113,18 @@ export function AsAboveApp() {
   };
   const wavesRefs: WavesRefs = {
     svg: useRef<SVGSVGElement | null>(null),
-    rings: useRef<(SVGPathElement | null)[]>([]),
-    pulses: useRef<(SVGGElement | null)[]>([]),
+    rings: useRef<(SVGGElement | null)[]>([]),
+    washes: useRef<(SVGPathElement | null)[]>([]),
     radii: useRef<number[]>([]),
   };
   const raysRef = useRef<HTMLDivElement | null>(null);
-  const keyZoneRef = useRef<HTMLDivElement | null>(null);
   const keyHandle = useRef<TriggerKeyHandle | null>(null);
   /** The key's windowed copy of the field (bent by the real lens) — the
       engine writes the same crest/ripple attributes to both trees. */
   const lensRefs: LensRefs = {
     svg: useRef<SVGSVGElement | null>(null),
-    rings: useRef<(SVGPathElement | null)[]>([]),
-    pulses: useRef<(SVGGElement | null)[]>([]),
+    rings: useRef<(SVGGElement | null)[]>([]),
+    washes: useRef<(SVGPathElement | null)[]>([]),
   };
   const growAnim = useRef<ReturnType<typeof animate> | null>(null);
 
@@ -139,39 +137,43 @@ export function AsAboveApp() {
     flare: 0,
     pulses: Array.from({ length: TABLET.waves.pulse.pool }, idlePulse),
     kicks: Array.from({ length: TABLET.waves.ringCount }, () => 0),
+    wash: Array.from({ length: TABLET.waves.ringCount }, () => 0),
+    washPrev: Array.from({ length: TABLET.waves.ringCount }, () => 0),
+    gulpStart: -1e9,
     decode: null,
     lastText: ['', '', ''],
     idleEpoch: 0,
   });
 
-  /** Launch a ripple through the field FROM ITS CAUSE: the key for a press,
-      the body for a sky swap. Origin is mapped into wave-svg units once per
-      fire (a user event, never per frame), and each ring's crossing distance
-      is precomputed so the front can kick rings and flare the body as it
-      travels. */
-  const firePulse = useCallback((origin: 'key' | 'body') => {
+  /** Fire the sky's answer. First the sea GULPS — every ring pulls inward
+      for one breath — and as it releases, a ripple is born at the body
+      (halo + rays flare at THAT moment, not at the press) and cascades
+      outward only as far as the TERMINAL ring: the first ring past the
+      tablet's bottom edge, measured here, once per fire (a user event,
+      never per frame). Every fire — press, tap, keyboard, oracle, sky
+      swap — speaks this same grammar. */
+  const firePulse = useCallback(() => {
     const st = eng.current;
-    const slot = st.pulses.findIndex((p) => p.q >= 1);
+    const radii = wavesRefs.radii.current;
+    const slot = st.pulses.findIndex((p) => p.q >= 1 && p.wait <= 0);
     const p = st.pulses[slot >= 0 ? slot : 0];
-    let dx = 0;
-    let dy = 0;
+    // The terminal ring. Fallback: the outermost (odd geometry, no slab).
+    let stopU = radii[radii.length - 1] ?? TABLET.waves.outerRadius;
     const svg = wavesRefs.svg.current;
-    const zone = keyZoneRef.current;
-    if (origin === 'key' && svg && zone) {
+    const slab = tabletRefs.dip.current;
+    if (svg && slab) {
       const s = svg.getBoundingClientRect();
-      const z = zone.getBoundingClientRect();
       if (s.width > 0) {
-        const toU = 1200 / s.width; // svg viewBox is a 1200u square
-        dx = (z.left + z.width / 2 - (s.left + s.width / 2)) * toU;
-        dy = (z.top + z.height / 2 - (s.top + s.height / 2)) * toU;
+        const dU =
+          (slab.getBoundingClientRect().bottom - (s.top + s.height / 2)) * (1200 / s.width);
+        stopU = radii.find((R) => R >= dU) ?? stopU;
       }
     }
     p.q = 0;
-    p.dx = dx;
-    p.dy = dy;
-    p.bodyDist = Math.hypot(dx, dy);
-    p.hit = wavesRefs.radii.current.map((R) => Math.abs(p.bodyDist - R));
-    p.flared = false;
+    p.wait = TABLET.waves.gulp.ms * TABLET.waves.gulp.launchFrac;
+    p.stopU = stopU;
+    st.gulpStart = performance.now();
+    // Refs are stable containers; nothing here re-binds.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -262,7 +264,7 @@ export function AsAboveApp() {
   }, []);
 
   const beginDecode = useCallback(
-    (fact: Fact, pulseFrom: 'key' | null = 'key') => {
+    (fact: Fact, withPulse = true) => {
       const st = eng.current;
       st.idleEpoch += 1;
       const texts: [string, string, string] = [
@@ -307,7 +309,7 @@ export function AsAboveApp() {
       st.decode = { plan: planDecode(texts, decodeRng.current, TABLET.decode), start: performance.now() };
       st.swell = 1; // the shared breath: gem glow AND wave amplitude
       st.dip.v += TABLET.dip.kickPxPerSec; // the tablet takes the weight
-      if (pulseFrom) firePulse(pulseFrom); // the world answers, from below
+      if (withPulse) firePulse(); // the sky answers: the ripple is born above
       writeDecodeFrame(performance.now()); // answer on THIS frame
       flipGrow(false);
       setDecodePhase('decoding');
@@ -372,12 +374,11 @@ export function AsAboveApp() {
     if (lastMode.current === oracle.mode) return;
     lastMode.current = oracle.mode;
     eng.current.dip.v += TABLET.dip.kickPxPerSec * 0.4;
-    // The sky announces itself: this ripple radiates from the BODY (and
-    // flares its rays at launch) — the swap's one pulse, so the re-speak
-    // below must not add a key-origin ripple of its own.
-    if (!live.current.inert) firePulse('body');
+    // The sky announces itself: the swap's one pulse, so the re-speak
+    // below must not add a second ripple of its own.
+    if (!live.current.inert) firePulse();
     const fact = currentFact(oracle);
-    if (fact) beginDecode(fact, null);
+    if (fact) beginDecode(fact, false);
     else beginIdle();
   }, [oracle, beginDecode, beginIdle, firePulse]);
 
@@ -423,7 +424,7 @@ export function AsAboveApp() {
         moonEl.setAttribute('opacity', pose.moon.opacity.toFixed(3));
       }
 
-      // The ripple's arrival flare decays toward rest…
+      // The ripple's launch flare decays toward rest…
       const P = TABLET.waves.pulse;
       st.flare = Math.max(0, st.flare - P.flareDecayPerSec * dt);
       if (L.inert) st.flare = 0;
@@ -518,58 +519,57 @@ export function AsAboveApp() {
         sheen.style.transform = `translateX(${slide.toFixed(2)}%)`;
       }
 
-      // The ripples: each front expands from its origin, kicks every wave
-      // ring as it crosses it, and flares the body the moment it arrives.
+      // The ripples: pure math, nothing drawn over the field. Each front
+      // waits out most of the gulp, is born at the body (halo + rays flare
+      // at THAT frame), glides to rest on its terminal ring, and hands its
+      // last light to that ring before going dark. One kernel per front
+      // drives BOTH answers a ring gives as it is crossed: the kick (radial
+      // heave) and the wash (flush toward the body's light).
       const W = TABLET.waves;
       const radii = wavesRefs.radii.current;
       const kicks = st.kicks;
+      const wash = st.wash;
       kicks.fill(0);
+      wash.fill(0);
       for (let p = 0; p < st.pulses.length; p += 1) {
         const pulse = st.pulses[p];
-        const el = wavesRefs.pulses.current[p];
-        if (!el) continue;
-        if (pulse.q >= 1) {
-          if (el.getAttribute('opacity') !== '0') el.setAttribute('opacity', '0');
-          const lensPulse = lensRefs.pulses.current[p];
-          if (lensPulse && lensPulse.getAttribute('opacity') !== '0') {
-            lensPulse.setAttribute('opacity', '0');
-          }
-          continue;
+        if (pulse.q >= 1) continue;
+        if (pulse.wait > 0) {
+          // The sea is still swallowing — the ripple is born on the release.
+          pulse.wait -= dt * 1000;
+          if (pulse.wait > 0) continue;
+          st.flare = 1; // birth: halo + rays ignite as the front leaves the body
         }
         pulse.q = Math.min(1, pulse.q + dt * W.pulse.speedPerSec);
         const q = pulse.q;
-        // Quadratic, not cubic: the front still leaps off the key but keeps
-        // traveling visibly through the far field instead of teleporting.
+        // Quadratic ease: the front leaps off the body, then GLIDES to rest
+        // on the terminal ring — arrival, not exit.
         const easeOut = 1 - (1 - q) * (1 - q);
-        const sc = W.pulse.fromScale + (W.pulse.toScale - W.pulse.fromScale) * easeOut;
-        const radiusU = sc * W.innerRadius;
-        const pulseTransform = `translate(${pulse.dx.toFixed(1)} ${pulse.dy.toFixed(1)}) scale(${sc.toFixed(4)})`;
-        const pulseOpacity = (Math.pow(1 - q, 1.35) * W.pulse.maxOpacity).toFixed(3);
-        el.setAttribute('transform', pulseTransform);
-        el.setAttribute('opacity', pulseOpacity);
-        const lensPulse = lensRefs.pulses.current[p];
-        if (lensPulse) {
-          lensPulse.setAttribute('transform', pulseTransform);
-          lensPulse.setAttribute('opacity', pulseOpacity);
-        }
-        if (!pulse.flared && radiusU >= pulse.bodyDist) {
-          pulse.flared = true;
-          st.flare = 1; // the front reaches the body: halo + rays answer
-        }
-        // The front's energy thins as it spreads.
-        const energy = 1 - q * 0.55;
-        for (let i = 0; i < pulse.hit.length && i < kicks.length; i += 1) {
-          const span = Math.abs(radiusU - pulse.hit[i]) / W.pulse.kickWidthU;
+        const startU = W.pulse.fromScale * W.innerRadius;
+        const radiusU = startU + (pulse.stopU - startU) * easeOut;
+        // Energy thins a little in flight, then extinguishes as the front
+        // settles (q→1): the terminal ring takes the arrival glow and the
+        // sea goes dark from there — no pop, no residue.
+        const energy = (1 - q * 0.35) * (1 - Math.pow(q, 5));
+        for (let i = 0; i < radii.length && i < kicks.length; i += 1) {
+          const span = Math.abs(radiusU - radii[i]) / W.pulse.kickWidthU;
           if (span < 1) {
             const k = (1 - span) * (1 - span);
             kicks[i] += W.pulse.kickAmpU * k * energy;
+            wash[i] += k * energy; // same kernel: light and heave are one front
           }
         }
       }
 
       // The sea: a phase-lagged crest travels the rings outward forever; the
-      // decode's swell raises the whole field's amplitude for a breath, and
-      // a passing ripple front heaves each ring in turn.
+      // decode's swell raises the whole field's amplitude for a breath; a
+      // passing ripple front heaves each ring — and lights it — in turn; and
+      // the gulp pulls the WHOLE sea inward for one breath at every fire
+      // (constant-u, like the crests, so the swallow reads evenly).
+      const G = W.gulp;
+      const gulpP = (now - st.gulpStart) / G.ms;
+      const gulpU =
+        !L.inert && gulpP >= 0 && gulpP < 1 ? -G.ampU * Math.sin(Math.PI * gulpP) : 0;
       const crest = W.ampU * (1 + st.swell * W.swellAmpBoost);
       for (let i = 0; i < radii.length; i += 1) {
         const ring = wavesRefs.rings.current[i];
@@ -577,12 +577,25 @@ export function AsAboveApp() {
         const s = L.inert
           ? 1
           : 1 +
-            (crest * Math.sin((TAU * t) / W.travelPeriodMs - i * W.phaseStepRad) + kicks[i]) /
+            (crest * Math.sin((TAU * t) / W.travelPeriodMs - i * W.phaseStepRad) +
+              kicks[i] +
+              gulpU) /
               radii[i];
         const ringTransform = `scale(${s.toFixed(4)})`;
         ring.setAttribute('transform', ringTransform);
         const lensRing = lensRefs.rings.current[i];
         if (lensRing) lensRing.setAttribute('transform', ringTransform);
+        // The wash twin: opacity only (fill is CSS — the theme glide owns
+        // it), written only on real change so idle frames skip the DOM.
+        const w = L.inert ? 0 : W.pulse.washMax * Math.min(1, wash[i]);
+        if (w !== st.washPrev[i] && (Math.abs(w - st.washPrev[i]) > 0.003 || w === 0)) {
+          st.washPrev[i] = w;
+          const o = w.toFixed(3);
+          const washEl = wavesRefs.washes.current[i];
+          if (washEl) washEl.setAttribute('opacity', o);
+          const lensWash = lensRefs.washes.current[i];
+          if (lensWash) lensWash.setAttribute('opacity', o);
+        }
       }
 
       // The decode boils toward legibility.
@@ -591,7 +604,7 @@ export function AsAboveApp() {
 
     raf = requestAnimationFrame(step);
     return () => cancelAnimationFrame(raf);
-  }, [booted, writeDecodeFrame, skyRefs.sun, skyRefs.moon, skyRefs.sunHalo, skyRefs.moonHalo, skyRefs.drift, tabletRefs.drift, tabletRefs.dip, tabletRefs.aura, tabletRefs.sheen, wavesRefs.rings, wavesRefs.pulses, wavesRefs.radii, lensRefs.rings, lensRefs.pulses, raysRef]);
+  }, [booted, writeDecodeFrame, skyRefs.sun, skyRefs.moon, skyRefs.sunHalo, skyRefs.moonHalo, skyRefs.drift, tabletRefs.drift, tabletRefs.dip, tabletRefs.aura, tabletRefs.sheen, wavesRefs.rings, wavesRefs.washes, wavesRefs.radii, lensRefs.rings, lensRefs.washes, raysRef]);
 
   // ── Keyboard: Enter/Space fire from anywhere; S flips the sky ──────────────
   useEffect(() => {
@@ -730,7 +743,7 @@ export function AsAboveApp() {
             showHint={!hintRetired}
             onTap={fire}
           />
-          <div className="key-zone" ref={keyZoneRef}>
+          <div className="key-zone">
             <TriggerKey ref={keyHandle} seed={seed} lensRefs={lensRefs} onFire={fire} />
           </div>
         </div>
