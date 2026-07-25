@@ -110,7 +110,7 @@ export const TABLET = {
         and the ripple is born as it releases. User-caused, so it outranks
         the ambient crest (15u > ampU 11). */
     gulp: {
-      ampU: 15, // inward swallow depth, svg units
+      ampU: 15, // inward swallow depth, svg units (sin² envelope — see the engine)
       ms: 320, // the whole breath
       launchFrac: 0.7, // the ripple is born THIS far into the gulp (overlap, not sequence)
     },
@@ -125,10 +125,11 @@ export const TABLET = {
         with the fact. */
     pulse: {
       pool: 3, // simultaneous ripples (mash headroom)
-      speedPerSec: 1.8, // journey to the terminal ring (quadratic ease — glides to rest)
+      speedPerSec: 1.4, // journey to the terminal ring (quadratic ease — glides to rest)
       fromScale: 0.04, // a point at the body; the stop radius is measured per fire
       kickAmpU: 20, // radial kick a ring gets as the front crosses it
-      kickWidthU: 115, // kernel half-width of that kick, svg units
+      kickWidthU: 135, // kernel half-width of that kick, svg units (wider = more
+      //                  rings lit at once, longer rise per ring — the anti-chop knob)
       washMax: 0.5, // peak wash-twin opacity — the ring at the front's crest
       flareBoost: 0.5, // halo opacity surge as the ripple is born at the body
       flareDecayPerSec: 1.5,

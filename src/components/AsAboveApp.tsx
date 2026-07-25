@@ -559,9 +559,13 @@ export function AsAboveApp() {
         }
         pulse.q = Math.min(1, pulse.q + dt * W.pulse.speedPerSec);
         const q = pulse.q;
-        // Quadratic ease: the front leaps off the body, then GLIDES to rest
-        // on the terminal ring — arrival, not exit.
-        const easeOut = 1 - (1 - q) * (1 - q);
+        // Sine ease-out: the front leaps off the body, then GLIDES to rest on
+        // the terminal ring — arrival, not exit. Sine, NOT quadratic: both
+        // land at zero velocity, but quadratic launches at 2× the average
+        // speed, which crossed the inner rings in ~3 frames each and read as
+        // chop. Sine peaks at 1.57×, so ring crossings are far more evenly
+        // spaced across the journey.
+        const easeOut = Math.sin(q * Math.PI * 0.5);
         const startU = W.pulse.fromScale * W.innerRadius;
         const radiusU = startU + (pulse.stopU - startU) * easeOut;
         // Energy thins a little in flight, then extinguishes as the front
@@ -571,7 +575,12 @@ export function AsAboveApp() {
         for (let i = 0; i < radii.length && i < kicks.length; i += 1) {
           const span = Math.abs(radiusU - radii[i]) / W.pulse.kickWidthU;
           if (span < 1) {
-            const k = (1 - span) * (1 - span);
+            // Raised cosine (Hann), NOT a squared falloff: zero slope at the
+            // apex AND at both edges, so a ring brightens and dims with no
+            // corner. `(1−span)²` peaked at a cusp — a visible tick as the
+            // front passed each ring — and carried less energy mid-span, so
+            // fewer rings overlapped.
+            const k = 0.5 * (1 + Math.cos(Math.PI * span));
             kicks[i] += W.pulse.kickAmpU * k * energy;
             wash[i] += k * energy; // same kernel: light and heave are one front
           }
@@ -585,8 +594,12 @@ export function AsAboveApp() {
       // (constant-u, like the crests, so the swallow reads evenly).
       const G = W.gulp;
       const gulpP = (now - st.gulpStart) / G.ms;
-      const gulpU =
-        !L.inert && gulpP >= 0 && gulpP < 1 ? -G.ampU * Math.sin(Math.PI * gulpP) : 0;
+      // sin², not sin: a plain half-sine still has velocity when it hits the
+      // end and clamps to 0 — a kink that lands at ~320ms, exactly where the
+      // innermost ring peaks. Squaring it starts and ENDS at zero velocity,
+      // so the swallow releases into the cascade instead of stopping dead.
+      const gulpSin = Math.sin(Math.PI * gulpP);
+      const gulpU = !L.inert && gulpP >= 0 && gulpP < 1 ? -G.ampU * gulpSin * gulpSin : 0;
       const crest = W.ampU * (1 + st.swell * W.swellAmpBoost);
       for (let i = 0; i < radii.length; i += 1) {
         const ring = wavesRefs.rings.current[i];
