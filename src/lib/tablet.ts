@@ -30,7 +30,7 @@
 // Ranking law: every ambient amplitude here is smaller AND slower than any
 // motion the user causes (dip max ≈ 13px vs bob 7px; swap 1.2s vs drift 30s;
 // wave crests drift for seconds, the gulp swallows in ~0.32s and the front
-// reaches its terminal ring in ~1.25s). The
+// lands on its terminal ring well inside a second). The
 // earth (dunes) is the one still anchor. TABLET.alive = false renders the
 // scene inert (facts still deal) — the one-line A/B kill-switch; the
 // console's MOTION chip ANDs with it.
@@ -119,11 +119,13 @@ export const TABLET = {
         instead each ring KICKS (radial heave) and WASHES (flushes toward
         the body's light, --pulse) as the front crosses its radius. The
         front does NOT permeate the scene: it glides to rest ON the terminal
-        ring — the first ring past the tablet's bottom edge, measured at
-        fire — takes the arrival glow there, and extinguishes. */
+        ring — the ring NEAREST THE KEY, measured at fire — takes the
+        arrival glow there, and extinguishes. Anchored to the key (fixed in
+        the layout), not the tablet, so the journey never changes length
+        with the fact. */
     pulse: {
       pool: 3, // simultaneous ripples (mash headroom)
-      speedPerSec: 0.8, // journey to the terminal ring ≈ 1.25s (quadratic ease — glides to rest)
+      speedPerSec: 1.8, // journey to the terminal ring (quadratic ease — glides to rest)
       fromScale: 0.04, // a point at the body; the stop radius is measured per fire
       kickAmpU: 20, // radial kick a ring gets as the front crosses it
       kickWidthU: 115, // kernel half-width of that kick, svg units

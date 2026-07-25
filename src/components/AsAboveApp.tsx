@@ -118,6 +118,9 @@ export function AsAboveApp() {
     radii: useRef<number[]>([]),
   };
   const raysRef = useRef<HTMLDivElement | null>(null);
+  /** The key's slot in the layout — the ripple's terminal ring is measured
+      to it (fixed, unlike the tablet, which grows with each fact). */
+  const keyZoneRef = useRef<HTMLDivElement | null>(null);
   const keyHandle = useRef<TriggerKeyHandle | null>(null);
   /** The key's windowed copy of the field (bent by the real lens) — the
       engine writes the same crest/ripple attributes to both trees. */
@@ -148,25 +151,39 @@ export function AsAboveApp() {
   /** Fire the sky's answer. First the sea GULPS — every ring pulls inward
       for one breath — and as it releases, a ripple is born at the body
       (halo + rays flare at THAT moment, not at the press) and cascades
-      outward only as far as the TERMINAL ring: the first ring past the
-      tablet's bottom edge, measured here, once per fire (a user event,
-      never per frame). Every fire — press, tap, keyboard, oracle, sky
-      swap — speaks this same grammar. */
+      outward only as far as the TERMINAL ring: the ring NEAREST THE KEY,
+      measured here, once per fire (a user event, never per frame). The key
+      is fixed in the layout, so the journey is the same length every time —
+      anchoring to the tablet made it jump with each fact's height. Every
+      fire — press, tap, keyboard, oracle, sky swap — speaks this same
+      grammar. */
   const firePulse = useCallback(() => {
     const st = eng.current;
     const radii = wavesRefs.radii.current;
     const slot = st.pulses.findIndex((p) => p.q >= 1 && p.wait <= 0);
     const p = st.pulses[slot >= 0 ? slot : 0];
-    // The terminal ring. Fallback: the outermost (odd geometry, no slab).
+    // The terminal ring. Fallback: the outermost (odd geometry, no key).
     let stopU = radii[radii.length - 1] ?? TABLET.waves.outerRadius;
     const svg = wavesRefs.svg.current;
-    const slab = tabletRefs.dip.current;
-    if (svg && slab) {
+    const zone = keyZoneRef.current;
+    if (svg && zone) {
       const s = svg.getBoundingClientRect();
       if (s.width > 0) {
-        const dU =
-          (slab.getBoundingClientRect().bottom - (s.top + s.height / 2)) * (1200 / s.width);
-        stopU = radii.find((R) => R >= dU) ?? stopU;
+        const z = zone.getBoundingClientRect();
+        // Distance from the body (svg center) down to the key's center.
+        const dU = (z.top + z.height / 2 - (s.top + s.height / 2)) * (1200 / s.width);
+        // NEAREST, not first-past: the light lands ON the key's ring rather
+        // than overshooting to whatever ring happens to clear it.
+        let best = stopU;
+        let bestGap = Infinity;
+        for (const R of radii) {
+          const gap = Math.abs(R - dU);
+          if (gap < bestGap) {
+            bestGap = gap;
+            best = R;
+          }
+        }
+        stopU = best;
       }
     }
     p.q = 0;
@@ -743,7 +760,7 @@ export function AsAboveApp() {
             showHint={!hintRetired}
             onTap={fire}
           />
-          <div className="key-zone">
+          <div className="key-zone" ref={keyZoneRef}>
             <TriggerKey ref={keyHandle} seed={seed} lensRefs={lensRefs} onFire={fire} />
           </div>
         </div>

@@ -20,8 +20,8 @@ specular gleam wanders its face, wave crests travel outward forever, and a
 press makes the whole sea GULP — one sharp inward breath — and on the
 release the sky answers: the halo flares with a slow wheel of rays and a
 ripple is born AT THE BODY, rolling down with the waves, each ring heaving
-and washing bright with the body's own light, until it lands on the first
-ring past the tablet and gives it the last of its glow —
+and washing bright with the body's own light, until it lands on the ring
+under your thumb and gives it the last of its glow —
 above answering below as one gesture. The tablet takes the weight of its
 new words and their engraving surges with light. Nothing ever lurches —
 every motion is interruptible mid-flight. Mash the key, flip the sky

@@ -46,11 +46,10 @@ continuous liquid motion through everything, all the time. The rules:
   (every ring pulls inward for one ~320ms breath) and on the release a
   ripple is born FROM THE BODY (sun or moon) — halo + ray bloom FLARE at
   that birth, not at the press — cascading outward with the waves only as
-  far as the TERMINAL ring (the first past the tablet's bottom edge,
-  measured per fire), kicking and washing each ring it crosses, handing its
-  arrival glow to the terminal ring and extinguishing, while the tablet
-  dips and its engraving lights — above answers below, and the answer lands
-  just beyond the words.
+  far as the TERMINAL ring (the ring NEAREST THE KEY, measured per fire),
+  kicking and washing each ring it crosses, handing its arrival glow to the
+  terminal ring and extinguishing, while the tablet dips and its engraving
+  lights — above answers below, and the answer lands where the hand is.
 - **Interruptible by construction:** interactive motion is springs (retarget
   keeps velocity) and the decode is a pure function of (plan, t) with no
   accumulated state — a retrigger plans toward the new text and the boiling
@@ -82,9 +81,10 @@ continuous liquid motion through everything, all the time. The rules:
   idle — plus `TABLET.alive = false`, the one-line kill-switch (facts still
   deal; motion stops). The console's MOTION chip ANDs with it at runtime.
 - **The ripple** originates at the body: `firePulse()` claims a pool slot,
-  measures the TERMINAL ring (first ring radius past `.tablet-dip`'s bottom
-  edge, mapped into wave-svg units once per fire), and starts the gulp
-  clock; the pulse waits out `gulp.ms × launchFrac`, then `flare = 1` fires
+  measures the TERMINAL ring (the ring radius NEAREST `.key-zone`'s center,
+  mapped into wave-svg units once per fire — the key is fixed in the
+  layout, so the journey is constant; anchoring to the tablet made it jump
+  with each fact's height), and starts the gulp clock; the pulse waits out `gulp.ms × launchFrac`, then `flare = 1` fires
   at BIRTH (halo boost + `.sky-rays` bloom decay from there). The front
   itself is UNSEEN math on a quadratic ease from the body to REST on the
   terminal ring: one kernel per frame accumulates each ring's KICK (radial
