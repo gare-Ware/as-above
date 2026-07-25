@@ -28,7 +28,7 @@
   --halo: #ffe9ad;
   --wave-root: #ff9e6e; /* innermost ring — the body's aura zone */
   --wave-edge: #4a2158; /* outermost ring = the page's base paint */
-  --pulse: #fff6e8; /* the ripple front — near-white so it reads over the field */
+  --pulse: #fff6e8; /* the ripple's light — the wash that sweeps the rings */
   --ink: #ffeed6; /* wordmark, hints, chip text on the backdrop */
   --dune-1: #c26584; /* far dune — rose against the coral field, so the earth reads */
   --dune-2: #93436f;
@@ -139,8 +139,9 @@ body {
 /* ── The wave field — the spectacle ──
    One SVG centered on the body; rings are seeded wobble blobs painted
    outermost-first, each one shade step from root toward edge. The engine
-   writes one scale per ring (the traveling crest) and drives the pulse
-   rings. Flat fills only — this repaints every frame. */
+   writes one scale per ring group (the traveling crest) and one opacity per
+   wash twin (the ripple's light). Flat fills only — this repaints every
+   frame. */
 .waves {
   position: absolute;
   left: 50%;
@@ -154,16 +155,13 @@ body {
 .wave-ring {
   transition: fill var(--theme-fade) ease;
 }
-.wave-pulse {
-  fill: none;
-  stroke: var(--pulse);
-  stroke-width: 5.5;
-  transition: stroke var(--theme-fade) ease;
-}
-/* The trailing echo: a thick faint stroke reads as glow — zero filters on
-   this per-frame SVG, ever. */
-.wave-pulse-echo {
-  stroke-width: 12;
+/* The wash twin: each ring's second skin in the body's light. The engine
+   owns only its opacity (the ripple front sweeping the field); fill stays
+   here so the sky swap glides it like every other token consumer. Flat and
+   unfiltered — this SVG repaints every frame. */
+.wave-wash {
+  fill: var(--pulse);
+  transition: fill var(--theme-fade) ease;
 }
 
 .stage {
@@ -621,28 +619,6 @@ main[data-decode='decoding'] .tablet-text {
   filter: blur(1.5px);
   pointer-events: none;
 }
-/* The press bloom: a refraction flash from the touch point. */
-.key-bloom {
-  position: absolute;
-  left: var(--press-x, 50%);
-  top: var(--press-y, 50%);
-  width: 10px;
-  height: 10px;
-  border-radius: 999px;
-  transform: translate(-50%, -50%) scale(0);
-  background: radial-gradient(closest-side, rgba(255, 255, 255, 0.95), transparent);
-  opacity: 0;
-  pointer-events: none;
-}
-/* The local shock ring: where the field ripple is born. */
-.key-shock {
-  position: absolute;
-  inset: -2px;
-  border-radius: 999px;
-  border: 1.5px solid rgba(255, 255, 255, 0.65);
-  opacity: 0;
-  pointer-events: none;
-}
 .glass-key[data-pressed='true'] .key-gloss {
   opacity: 0.45;
 }
@@ -653,34 +629,6 @@ main[data-decode='decoding'] .tablet-text {
     0 0 28px rgba(255, 255, 255, 0.22),
     inset 0 -6px 12px -9px rgba(8, 18, 36, 0.3),
     inset 0 0 24px rgba(255, 255, 255, 0.2);
-}
-@media (prefers-reduced-motion: no-preference) {
-  [data-motion='live'] .key-bloom[data-bloom='true'] {
-    animation: key-bloom 620ms cubic-bezier(0.2, 0, 0.2, 1) both;
-  }
-  [data-motion='live'] .key-shock[data-bloom='true'] {
-    animation: key-shock 560ms cubic-bezier(0.2, 0, 0.2, 1) both;
-  }
-}
-@keyframes key-bloom {
-  0% {
-    transform: translate(-50%, -50%) scale(0);
-    opacity: 0.85;
-  }
-  100% {
-    transform: translate(-50%, -50%) scale(22);
-    opacity: 0;
-  }
-}
-@keyframes key-shock {
-  0% {
-    transform: scale(1);
-    opacity: 0.55;
-  }
-  100% {
-    transform: scale(2.1);
-    opacity: 0;
-  }
 }
 /* The emblem — the nested pyramid, engraved in light. */
 .key-emblem {

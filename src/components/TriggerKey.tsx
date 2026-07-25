@@ -13,9 +13,10 @@
 // label — the nested pyramid of the Emerald Tablet cover says what words
 // would cheapen. The press is a major moment: it fires
 // IMMEDIATELY (pointerdown, never click), sinks like pressed glass, DEEPENS
-// THE LENS (cheap-path setStrength), blooms a refraction flash from the
-// touch point, casts a shock ring — and, via the orchestrator, launches the
-// ripple that races the whole field from HERE up into the body's rays.
+// THE LENS (cheap-path setStrength) — and, via the orchestrator, the SKY
+// answers: the ripple is born at the body and cascades down through the
+// whole field, warping under this glass as it passes. The key itself stays
+// quiet — no local flash or ring competes with the sky's reply.
 // Release settles on the stage's one rationed jelly-bounce. The global
 // keyboard path (Enter/Space anywhere) drives the same physics.
 
@@ -43,8 +44,8 @@ export interface TriggerKeyHandle {
 /** Refs the engine writes: the key's windowed copy of the field. */
 export interface LensRefs {
   svg: RefObject<SVGSVGElement | null>;
-  rings: RefObject<(SVGPathElement | null)[]>;
-  pulses: RefObject<(SVGGElement | null)[]>;
+  rings: RefObject<(SVGGElement | null)[]>;
+  washes: RefObject<(SVGPathElement | null)[]>;
 }
 
 type LensMode = 'pending' | 'flat' | 'bent';
@@ -69,8 +70,6 @@ export const TriggerKey = forwardRef<
 >(function TriggerKey({ seed, lensRefs, onFire }, handle) {
   const keyRef = useRef<HTMLButtonElement>(null);
   const sceneRef = useRef<HTMLSpanElement>(null);
-  const bloomRef = useRef<HTMLSpanElement>(null);
-  const shockRef = useRef<HTMLSpanElement>(null);
   const anim = useRef<ReturnType<typeof animate> | null>(null);
   const lens = useRef<Lens | null>(null);
   const [lensMode, setLensMode] = useState<LensMode>('pending');
@@ -104,7 +103,7 @@ export const TriggerKey = forwardRef<
     };
   }, [lensMode]);
 
-  function press(atX?: number, atY?: number) {
+  function press() {
     const key = keyRef.current;
     if (!key) return;
     anim.current?.stop();
@@ -125,20 +124,6 @@ export const TriggerKey = forwardRef<
     );
     // The glass compresses: the bend deepens (cheap path — attributes only).
     lens.current?.setStrength(TABLET.key.lens.strength * TABLET.key.lens.pressBoost);
-    const bloom = bloomRef.current;
-    if (bloom) {
-      key.style.setProperty('--press-x', atX === undefined ? '50%' : `${atX}px`);
-      key.style.setProperty('--press-y', atY === undefined ? '50%' : `${atY}px`);
-      bloom.dataset.bloom = 'false';
-      void bloom.offsetWidth; // restart the bloom animation
-      bloom.dataset.bloom = 'true';
-    }
-    const shock = shockRef.current;
-    if (shock) {
-      shock.dataset.bloom = 'false';
-      void shock.offsetWidth;
-      shock.dataset.bloom = 'true';
-    }
   }
 
   function release() {
@@ -161,7 +146,7 @@ export const TriggerKey = forwardRef<
     );
   }
 
-  useImperativeHandle(handle, () => ({ press: () => press(), release }));
+  useImperativeHandle(handle, () => ({ press, release }));
 
   function onPointerDown(e: ReactPointerEvent<HTMLButtonElement>) {
     try {
@@ -169,10 +154,7 @@ export const TriggerKey = forwardRef<
     } catch {
       // Synthetic pointers (tests, capture scripts) have no live pointerId.
     }
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = Math.min(Math.max(e.clientX - rect.left, 0), rect.width);
-    const y = Math.min(Math.max(e.clientY - rect.top, 0), rect.height);
-    press(x, y);
+    press();
     onFire();
   }
 
@@ -214,40 +196,30 @@ export const TriggerKey = forwardRef<
                 {[...rings].reverse().map((ring, rev) => {
                   const i = rings.length - 1 - rev;
                   return (
-                    <path
+                    <g
                       key={i}
                       ref={(el) => {
                         lensRefs.rings.current[i] = el;
                       }}
-                      d={ring.d}
-                      className="wave-ring"
-                      style={{
-                        fill: `color-mix(in oklab, var(--wave-root) ${ring.mix}%, var(--wave-edge))`,
-                      }}
-                    />
+                    >
+                      <path
+                        d={ring.d}
+                        className="wave-ring"
+                        style={{
+                          fill: `color-mix(in oklab, var(--wave-root) ${ring.mix}%, var(--wave-edge))`,
+                        }}
+                      />
+                      <path
+                        d={ring.d}
+                        className="wave-wash"
+                        opacity={0}
+                        ref={(el) => {
+                          lensRefs.washes.current[i] = el;
+                        }}
+                      />
+                    </g>
                   );
                 })}
-                {Array.from({ length: TABLET.waves.pulse.pool }, (_, p) => (
-                  <g
-                    key={p}
-                    ref={(el) => {
-                      lensRefs.pulses.current[p] = el;
-                    }}
-                    opacity={0}
-                  >
-                    <circle
-                      r={TABLET.waves.innerRadius * 0.9}
-                      className="wave-pulse wave-pulse-echo"
-                      vectorEffect="non-scaling-stroke"
-                      opacity={TABLET.waves.pulse.echoOpacity}
-                    />
-                    <circle
-                      r={TABLET.waves.innerRadius}
-                      className="wave-pulse"
-                      vectorEffect="non-scaling-stroke"
-                    />
-                  </g>
-                ))}
               </g>
             </svg>
           </span>
@@ -260,8 +232,6 @@ export const TriggerKey = forwardRef<
       <span className="key-gloss" aria-hidden="true" />
       <span className="key-glint" aria-hidden="true" />
       <span className="key-caps" aria-hidden="true" />
-      <span ref={shockRef} className="key-shock" data-bloom="false" aria-hidden="true" />
-      <span ref={bloomRef} className="key-bloom" data-bloom="false" aria-hidden="true" />
       <Emblem />
     </button>
   );

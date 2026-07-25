@@ -42,12 +42,14 @@ continuous liquid motion through everything, all the time. The rules:
   symmetric, and the sheen is a small wander that must never park on a rail
   and fake a side-light.
 - **Coherence spine:** ONE swell state drives the gem's glow surge and the
-  wave field's amplitude, and every fire launches a ripple FROM ITS CAUSE —
-  the key for a press/tap/keyboard/oracle, the body for a sky swap. The
-  front races the whole field, kicks each wave ring as it crosses it
-  (per-ring crossing distances precomputed at fire), and FLARES the body's
-  halo + ray bloom when it arrives, while the tablet dips and its engraving
-  lights — below answers above as one continuous gesture.
+  wave field's amplitude, and every fire speaks one grammar: the sea GULPS
+  (every ring pulls inward for one ~320ms breath) and on the release a
+  ripple is born FROM THE BODY (sun or moon) — halo + ray bloom FLARE at
+  that birth, not at the press — cascading outward with the waves only as
+  far as the TERMINAL ring (the ring NEAREST THE KEY, measured per fire),
+  kicking and washing each ring it crosses, handing its arrival glow to the
+  terminal ring and extinguishing, while the tablet dips and its engraving
+  lights — above answers below, and the answer lands where the hand is.
 - **Interruptible by construction:** interactive motion is springs (retarget
   keeps velocity) and the decode is a pure function of (plan, t) with no
   accumulated state — a retrigger plans toward the new text and the boiling
@@ -63,9 +65,9 @@ continuous liquid motion through everything, all the time. The rules:
   spring) → gem; `.tablet-aura` (glow breath + swell) · `.tablet-sheen`
   (specular wander on its own period) · sky drift g → sun/moon g's (swap
   pose + opacity) · halos (per-body breath + ripple flare) · `.sky-rays`
-  (flare opacity + slow wheel) · one scale per wave ring (crest travel +
-  ripple kick) · ripple groups (pool of 3, each a bright front + thick
-  faint echo, positioned at its fire's origin) · the key's lens copy
+  (flare opacity + slow wheel) · one scale per wave-ring group (crest
+  travel + ripple kick) + one opacity per wash twin (the ripple's light
+  sweeping the rings; fronts are pooled ×3, pure math) · the key's lens copy
   (every ring/ripple write mirrored into the windowed field inside the
   glass) · the three text blocks (decode `textContent`, written only on
   churn change).
@@ -78,13 +80,21 @@ continuous liquid motion through everything, all the time. The rules:
   ripple: speed/scales/kick/flare/rays), sheen, decode cadence, oracle
   idle — plus `TABLET.alive = false`, the one-line kill-switch (facts still
   deal; motion stops). The console's MOTION chip ANDs with it at runtime.
-- **The ripple** originates at its cause: `firePulse('key' | 'body')` maps
-  the key-zone's center into wave-svg units ONCE per fire (never per frame)
-  and precomputes each ring's crossing distance `|bodyDist − R_i|`; the
-  engine advances the front on a quadratic ease, writes
-  `translate(dx dy) scale(s)` per ripple group, accumulates per-ring kicks
-  through a quadratic kernel, and sets `flare = 1` the frame the front
-  radius passes the body — halo boost + `.sky-rays` bloom decay from there.
+- **The ripple** originates at the body: `firePulse()` claims a pool slot,
+  measures the TERMINAL ring (the ring radius NEAREST `.key-zone`'s center,
+  mapped into wave-svg units once per fire — the key is fixed in the
+  layout, so the journey is constant; anchoring to the tablet made it jump
+  with each fact's height), and starts the gulp clock; the pulse waits out `gulp.ms × launchFrac`, then `flare = 1` fires
+  at BIRTH (halo boost + `.sky-rays` bloom decay from there). The front
+  itself is UNSEEN math on a quadratic ease from the body to REST on the
+  terminal ring: one kernel per frame accumulates each ring's KICK (radial
+  heave) and WASH (opacity of a `--pulse`-filled twin path riding in the
+  ring's group) as the front crosses its radius, inner to outer, with
+  energy `(1−0.35q)(1−q⁵)` so the terminal ring takes the arrival glow and
+  the light extinguishes with no pop — the shock is the sea lighting up,
+  never a shape drawn over it. Wash twins own fill in CSS (theme glide);
+  the engine writes opacity only, and only on real change. The gulp is a
+  constant-u inward half-sine on every ring, applied in the crest sum.
 - **The wave field** (`src/components/Waves.tsx`): 9 seeded wobble-edged
   blob rings centered on the body, spanning svg-space 150→585 units where
   600u ↔ `--wave-size`/2 (twice the center-to-farthest-corner distance, via

@@ -20,17 +20,17 @@
 //   waves   — the world: rings radiating from the body across the viewport.
 //             A phase-offset radial oscillation makes crests travel outward
 //             forever; the SAME swell that surges the gem's glow swells the
-//             wave amplitude, and every fire launches a ripple FROM ITS CAUSE
-//             (the key for a press, the body for a sky swap) that races the
-//             field, kicks each ring as its front passes, and FLARES the
-//             body's halo + rays when it arrives — below answers above as
-//             one continuous gesture
+//             wave amplitude, and every fire launches a ripple FROM THE BODY
+//             (sun or moon): halo + rays FLARE at launch and the front
+//             cascades outward with the waves, kicking each ring in turn as
+//             it crosses — above answers below as one continuous gesture
 //   sheen   — the specular band on the gem drifts on its own slow period
 //             (the tablet no longer tilts, so the light itself wanders)
 //
 // Ranking law: every ambient amplitude here is smaller AND slower than any
 // motion the user causes (dip max ≈ 13px vs bob 7px; swap 1.2s vs drift 30s;
-// wave crests drift for seconds, the press pulse crosses in ~1.7s). The
+// wave crests drift for seconds, the gulp swallows in ~0.32s and the front
+// lands on its terminal ring well inside a second). The
 // earth (dunes) is the one still anchor. TABLET.alive = false renders the
 // scene inert (facts still deal) — the one-line A/B kill-switch; the
 // console's MOTION chip ANDs with it.
@@ -105,19 +105,33 @@ export const TABLET = {
     phaseStepRad: 0.66, // per-ring lag — the outward travel
     ampU: 11, // radial crest height, svg units (constant px ≈ real wave)
     swellAmpBoost: 1.7, // the decode swell swells the sea too
-    /** The ripple: a two-ring front launched FROM ITS CAUSE (key or body),
-        racing the whole field, kicking each wave ring as it passes and
-        flaring the body's halo + rays on arrival. */
+    /** The gulp — the fire's anticipation: the whole sea pulls inward for
+        one breath (a constant-u swallow toward the body, half-sine envelope)
+        and the ripple is born as it releases. User-caused, so it outranks
+        the ambient crest (15u > ampU 11). */
+    gulp: {
+      ampU: 15, // inward swallow depth, svg units (sin² envelope — see the engine)
+      ms: 320, // the whole breath
+      launchFrac: 0.7, // the ripple is born THIS far into the gulp (overlap, not sequence)
+    },
+    /** The ripple: an unseen front born AT THE BODY as the gulp releases,
+        flaring halo + rays at birth — no shape is drawn over the field;
+        instead each ring KICKS (radial heave) and WASHES (flushes toward
+        the body's light, --pulse) as the front crosses its radius. The
+        front does NOT permeate the scene: it glides to rest ON the terminal
+        ring — the ring NEAREST THE KEY, measured at fire — takes the
+        arrival glow there, and extinguishes. Anchored to the key (fixed in
+        the layout), not the tablet, so the journey never changes length
+        with the fact. */
     pulse: {
       pool: 3, // simultaneous ripples (mash headroom)
-      speedPerSec: 0.46, // full crossing ≈ 2.2s (quadratic ease — savored, not snapped)
-      maxOpacity: 0.8,
-      fromScale: 0.04, // a point at the cause…
-      toScale: 7.4, // …to past the farthest corner (radius ≈ 1110u)
-      echoOpacity: 0.4, // the trailing soft ring (thick faint stroke = glow)
+      speedPerSec: 1.4, // journey to the terminal ring (quadratic ease — glides to rest)
+      fromScale: 0.04, // a point at the body; the stop radius is measured per fire
       kickAmpU: 20, // radial kick a ring gets as the front crosses it
-      kickWidthU: 115, // kernel half-width of that kick, svg units
-      flareBoost: 0.5, // halo opacity surge when the front reaches the body
+      kickWidthU: 135, // kernel half-width of that kick, svg units (wider = more
+      //                  rings lit at once, longer rise per ring — the anti-chop knob)
+      washMax: 0.5, // peak wash-twin opacity — the ring at the front's crest
+      flareBoost: 0.5, // halo opacity surge as the ripple is born at the body
       flareDecayPerSec: 1.5,
       raysMaxOpacity: 0.8, // the ray bloom behind the body at full flare
       raysDegPerSec: 6, // the rays' slow shimmer rotation while lit
