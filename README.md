@@ -9,8 +9,12 @@ catching the sky, its pale-jade lettering engraved into the stone. In the
 thumb zone, the app's hero control: a wide pill of clear LIQUID glass —
 deliberately the only unthemed object on stage, the scene visible through
 it, refraction pooling at its rim — carrying the nested pyramid of the
-Emerald Tablet's cover instead of a label. Pressing it scrambles the
-tablet's glyphs into a fun conspiracy fact about whatever is above.
+Emerald Tablet's cover instead of a label. Pressing it engraves a fun
+conspiracy fact about whatever is above: one downward pass of gold
+writing-light lifts the old letters away just ahead of landing the new
+ones — igniting as pure light, cooling into carved jade — with only a thin
+wake of bare stone traveling between the leaving fact and the arriving
+one.
 
 *As above, so below* — the Emerald Tablet's own line. The SKY toggle
 literally chooses what is above.
@@ -56,15 +60,15 @@ npm run dev        # http://localhost:3000
 - **S** — flip the sky (sun ⇄ moon: body, wave palette, earth, and corpus
   all swap).
 - **console** (chip, bottom right) — SKY · SUN/MOON, MOTION · LIVE/STILL,
-  ORACLE · AUTO/OFF (left alone for ~45s, the tablet re-decodes on its own).
+  ORACLE · AUTO/OFF (left alone for ~45s, the tablet speaks again on its own).
 
-Honors `prefers-reduced-motion`: the field goes still, the decode becomes a
-crossfade, the sky swap becomes a fade — nothing is lost but the physics.
+Honors `prefers-reduced-motion`: the field goes still, the engraving becomes
+a crossfade, the sky swap becomes a fade — nothing is lost but the physics.
 
 ## Verify
 
 ```bash
-npm test               # corpus integrity, picker law, decode math, state
+npm test               # corpus integrity, picker law, engrave math, state
 npm run test:e2e       # Playwright smoke (trigger loop, drawer, overflow, a11y paths)
 node scripts/peek.mjs          # frame-captures the choreography (dev server up)
 node scripts/peek-reduced.mjs  # the reduced-motion contract, framed

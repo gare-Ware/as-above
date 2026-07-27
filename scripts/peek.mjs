@@ -1,6 +1,8 @@
 // Frame-capture harness: drives the live dev app and saves stills at the
-// beats that matter — idle float, decode cascade, TRIGGER mash, the sky swap
-// (including a mid-swap reversal), the console drawer, and a desktop frame.
+// beats that matter — idle float, the engraving (exit sweep, bare stone,
+// writing-light, settle), TRIGGER mash, the sky swap (including a mid-swap
+// reversal), the console drawer, and a desktop frame. For a dense
+// frame-by-frame look at one engrave cycle, see peek-engrave.mjs.
 // Usage: node scripts/peek.mjs [outdir] (default: shots)
 // Requires the dev server on http://localhost:3000.
 import { chromium } from '@playwright/test';
@@ -23,16 +25,28 @@ await shot('01-idle-sun');
 await page.waitForTimeout(2800);
 await shot('02-idle-sun-drift'); // compare against 01: the tablet must have moved
 
-// ── The decode: press the key, catch the cascade ──
+// ── The engraving: press the key, catch each beat. A first press writes
+//    onto bare stone (no erase), so settle one fact first, then capture a
+//    FULL pass: one downward sweep (~1.1s) where the erase edge lifts the
+//    old fact away just ahead of the write edge landing the new one — a
+//    thin wake of bare stone traveling between, never a blank tablet.
+//    Screenshot latency skews nominal times late — treat these as "no
+//    earlier than" beats. ──
 const key = page.getByRole('button', { name: /trigger/i });
 await key.dispatchEvent('pointerdown');
-await page.waitForTimeout(90);
-await shot('03-decode-boil');
 await key.dispatchEvent('pointerup');
+await page.waitForSelector('main[data-decode="settled"]', { timeout: 5_000 });
+await page.waitForTimeout(400);
+await key.dispatchEvent('pointerdown');
+await key.dispatchEvent('pointerup');
+await page.waitForTimeout(220);
+await shot('03-engrave-strike'); // the light strikes the top: new igniting over old
 await page.waitForTimeout(320);
-await shot('04-decode-cascade');
-await page.waitForTimeout(600);
-await shot('05-decode-settled');
+await shot('04-engrave-wake'); // mid-pass: new above, old below, the wake between
+await page.waitForTimeout(330);
+await shot('04b-engrave-landing'); // the write edge landing at the reality tag
+await page.waitForTimeout(700);
+await shot('05-engrave-settled');
 
 // ── The pulse: catch the press ring mid-field ──
 await key.dispatchEvent('pointerdown');
@@ -69,10 +83,12 @@ await shot('11-swap-reversal');
 await page.waitForTimeout(1500);
 await shot('12-moon-recovered');
 
-// ── Moon decode ──
+// ── Moon engrave ──
 await page.keyboard.press('Enter');
-await page.waitForTimeout(1100);
-await shot('13-moon-fact');
+await page.waitForTimeout(900);
+await shot('13-moon-writing'); // the gold writing-light under the moon
+await page.waitForTimeout(800);
+await shot('13b-moon-fact');
 
 // ── The drawer: the whole stage lifts on mobile ──
 await page.getByRole('button', { name: /console/i }).click();

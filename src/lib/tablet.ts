@@ -10,9 +10,13 @@
 //
 //   float   — the tablet's levitation: a pure vertical bob (the tablet is
 //             always plumb — symmetry is the design language; no sway, no tilt)
-//   dip     — the decode's suspension physics: the tablet "takes the weight"
+//   dip     — the fire's suspension physics: the tablet "takes the weight"
 //             of the new words, sinks a few px, springs back (underdamped)
-//   glow    — the gem's aura breathes on its own period; a decode adds a
+//   breath  — the fire's anticipation on the stone itself: the tablet
+//             INHALES (a centered, narrower-dominant contraction) on the
+//             sea's own gulp clock and releases as the ripple is born —
+//             the slab always dips below its final size, then expands
+//   glow    — the gem's aura breathes on its own period; a fire adds a
 //             swell that decays exponentially
 //   sky     — the body drifts almost imperceptibly; its halo breathes on a
 //             different period per body; the swap is one continuous spring,
@@ -36,7 +40,7 @@
 // console's MOTION chip ANDs with it.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { DECODE_DEFAULTS, type DecodeOpts } from './decode';
+import { ENGRAVE_DEFAULTS, type EngraveOpts } from './engrave';
 
 export const TABLET = {
   /** Master switch: false = inert stage (facts still deal; motion stops). */
@@ -48,29 +52,68 @@ export const TABLET = {
     periodY: 6200,
   },
 
-  /** The decode dip — underdamped so it sinks and rights itself in ~2 rings. */
+  /** The fire dip — underdamped so it sinks and rights itself in ~2 rings. */
   dip: {
     stiffness: 92,
     damping: 11, // ζ≈0.57
-    kickPxPerSec: 130, // downward velocity impulse per decode (max dip ≈ 13px)
+    kickPxPerSec: 130, // downward velocity impulse per fire (max dip ≈ 13px)
   },
 
-  /** Phosphor aura: base presence, slow breath, decode swell. */
+  /** The stone inhales with the sea: at every fire the tablet contracts
+      about its center on the SAME gulp clock as the wave field — narrower-
+      dominant (an inward pull, per the gulp's grammar, not a squash-and-
+      stretch) — and releases as the ripple is born, so the slab's perceived
+      size always dips below its final size and EXPANDS to it. A spring
+      chases the gulp envelope (interactive = springs: a mash retargets with
+      velocity, never snaps), slightly underdamped so the release carries a
+      whisper of expansion past rest. Transform-only, on the dip channel:
+      real width would reflow the monospace wrap under the four engrave
+      layers; real height would clip the outgoing text still standing on
+      the lower stone. */
+  breath: {
+    ampX: 0.025, // scaleX at full gulp (~9px on a 350px slab — outranks the 7px bob)
+    ampY: 0.015, // scaleY at full gulp — shallower: the pull reads NARROWER
+    /** The stiffest spring in the engine (ω=30 — it must track a 320ms
+        envelope with only a ~35ms heavier-than-water lag). At that rate
+        the loop's dt clamp (0.05s) puts one-step Euler past stability, so
+        the engine SUB-STEPS this spring — never integrate it with a raw
+        frame dt (measured: a long settle frame flipped the sigh into a
+        +0.6% expansion spike). */
+    stiffness: 900,
+    damping: 36, // ζ≈0.6
+    /** The release's whisper: after the gulp lets go, the envelope dips
+        this far NEGATIVE (an expansion past rest, as a fraction of the
+        full gulp) before settling — the spring alone can't overshoot,
+        since it tracks a target that decelerates smoothly to zero. */
+    rebound: 0.12,
+    reboundFrac: 0.4, // the whisper's width, as a fraction of gulp.ms
+    /** Settle-exhale impulse when a SHORTER fact lands (the shrink case):
+        the slab dips just below its final size and rises into it — the
+        last visible move is always an expansion. (An underdamped HEIGHT
+        spring was rejected: it clips into the face's bottom padding and
+        flattens silently at min-height.) */
+    sighKick: 24,
+  },
+
+  /** The gem's aura: base presence, slow breath, per-fire swell. */
   glow: {
     base: 0.55,
     breatheDepth: 0.14,
     periodMs: 5400,
-    swellBoost: 0.42, // added at decode, then decays
+    swellBoost: 0.42, // added at fire, then decays
     swellDecayPerSec: 1.5,
   },
 
   /** Screen growth when a fact needs more slab (FLIP height spring —
       numbers live in lib/motion.ts GROW; mirrored here for the record).
-      Soft on purpose: the slab breathes to size, it never pops. */
-  grow: { stiffness: 110, damping: 22 },
+      Soft on purpose: the slab breathes to size, it never pops — measured
+      at fire, growth LAUNCHES at the gulp's release (the ripple's birth)
+      and expands ahead of the write edge; a shrink exhales at settle,
+      answered by the breath's sigh. */
+  grow: { stiffness: 90, damping: 20 },
 
-  /** Decode cadence (pure math in lib/decode.ts; numbers owned here). */
-  decode: { ...DECODE_DEFAULTS } satisfies DecodeOpts,
+  /** The engraving sweep (pure math in lib/engrave.ts; numbers owned here). */
+  engrave: { ...ENGRAVE_DEFAULTS } satisfies EngraveOpts,
 
   /** The sky: drift at the threshold of notice; the swap is the second-
       biggest motion on stage and still not a pole. */
@@ -104,7 +147,7 @@ export const TABLET = {
     travelPeriodMs: 8800, // one crest cycle
     phaseStepRad: 0.66, // per-ring lag — the outward travel
     ampU: 11, // radial crest height, svg units (constant px ≈ real wave)
-    swellAmpBoost: 1.7, // the decode swell swells the sea too
+    swellAmpBoost: 1.7, // the fire's swell swells the sea too
     /** The gulp — the fire's anticipation: the whole sea pulls inward for
         one breath (a constant-u swallow toward the body, half-sine envelope)
         and the ripple is born as it releases. User-caused, so it outranks
@@ -154,7 +197,7 @@ export const TABLET = {
     lens: { depth: 26, strength: 60, chroma: 0.12, pressBoost: 1.45, bleedPx: 24 },
   },
 
-  /** ORACLE — AUTO: the tablet re-decodes on its own after this much idle. */
+  /** ORACLE — AUTO: the tablet speaks again on its own after this much idle. */
   oracleIdleMs: 45_000,
 } as const;
 

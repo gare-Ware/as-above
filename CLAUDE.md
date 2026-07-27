@@ -4,7 +4,7 @@
 AS ABOVE — a motion-saturated single-scene web app: a rounded emerald slab
 floats before the sun or moon, whose color radiates across the whole
 viewport as a field of traveling waves; a liquid-glass key (the app's hero
-control) scrambles the tablet's engraved glyphs into verified conspiracy
+control) magically re-engraves the tablet with verified conspiracy
 lore about whatever is above. Human-facing overview and controls live in
 `README.md`.
 
@@ -14,13 +14,14 @@ lore about whatever is above. Human-facing overview and controls live in
 - `npm run dev` — dev server (http://localhost:3000)
 - `npm run build` — production build (type-checks) · `npm run start` — serve it
 - `npm run lint` — ESLint · `npm run typecheck` — `tsc --noEmit`
-- `npm run test` — Vitest (corpus integrity, picker law, decode math, oracle state)
+- `npm run test` — Vitest (corpus integrity, picker law, engrave math, oracle state)
 - `npm run test:e2e` — Playwright smoke on port 3111 (trigger loop, drawer +
   sky swap, 375px overflow, keyboard-only path, STILL, reduced motion)
-- Verifying motion: `node scripts/peek.mjs [outdir]` (idle/decode/mash/swap/
-  reversal/drawer beats) and `node scripts/peek-reduced.mjs` — Playwright
-  frame captures against the running dev server. Never sign off choreography
-  from code alone.
+- Verifying motion: `node scripts/peek.mjs [outdir]` (idle/engrave/mash/swap/
+  reversal/drawer beats), `node scripts/peek-engrave.mjs [outdir]` (a dense
+  frame burst across one full engrave cycle), and
+  `node scripts/peek-reduced.mjs` — Playwright frame captures against the
+  running dev server. Never sign off choreography from code alone.
 
 ## Stack
 - Next.js 15 (App Router) · React 19 · TypeScript · Tailwind v4 · Motion
@@ -31,7 +32,7 @@ lore about whatever is above. Human-facing overview and controls live in
 HATCH banked its drama budget for two poles. AS ABOVE spreads it as
 continuous liquid motion through everything, all the time. The rules:
 - **Ranking law:** every ambient amplitude is smaller AND slower than any
-  user-caused motion (bob 7px/6.2s vs decode dip ~13px impulse; wave crests
+  user-caused motion (bob 7px/6.2s vs fire dip ~13px impulse; wave crests
   drift on an ~8.8s cycle vs the ripple front crossing in ~2.2s). Ambient
   sines use incommensurate periods so nothing visibly syncs. The earth
   (dunes) is RETIRED from the stage for now — `Dunes.tsx`, its CSS, and the
@@ -43,43 +44,53 @@ continuous liquid motion through everything, all the time. The rules:
   and fake a side-light.
 - **Coherence spine:** ONE swell state drives the gem's glow surge and the
   wave field's amplitude, and every fire speaks one grammar: the sea GULPS
-  (every ring pulls inward for one ~320ms breath) and on the release a
-  ripple is born FROM THE BODY (sun or moon) — halo + ray bloom FLARE at
-  that birth, not at the press — cascading outward with the waves only as
-  far as the TERMINAL ring (the ring NEAREST THE KEY, measured per fire),
-  kicking and washing each ring it crosses, handing its arrival glow to the
-  terminal ring and extinguishing, while the tablet dips and its engraving
-  lights — above answers below, and the answer lands where the hand is.
+  (every ring pulls inward for one ~320ms breath) — and the STONE INHALES
+  WITH IT (the breath: a centered, narrower-dominant squeeze on the same
+  gulp clock, so the slab always dips below its final size) — and on the
+  release a ripple is born FROM THE BODY (sun or moon) — halo + ray bloom
+  FLARE at that birth, not at the press — cascading outward with the waves
+  only as far as the TERMINAL ring (the ring NEAREST THE KEY, measured per
+  fire), kicking and washing each ring it crosses, handing its arrival glow
+  to the terminal ring and extinguishing, while the tablet dips, its
+  engraving lights, and its FLIP growth launches at that same release —
+  above answers below, and the answer lands where the hand is.
 - **Interruptible by construction:** interactive motion is springs (retarget
-  keeps velocity) and the decode is a pure function of (plan, t) with no
-  accumulated state — a retrigger plans toward the new text and the boiling
-  frame is simply its starting field. Wave crest travel is a phase-lagged
-  radial oscillation — no respawn seam to glitch. TRIGGER-mashing and
-  mid-swap reversal are e2e-tested.
+  keeps velocity) and the engrave is a pure function of (plan, t) whose only
+  state is its two edges — a retrigger re-plans from the current frame (an
+  early pass keeps erasing from the same edge; a late one promotes the
+  half-written fact to outgoing), so the light never snaps. Wave crest
+  travel is a phase-lagged radial oscillation — no respawn seam to glitch.
+  TRIGGER-mashing and mid-swap reversal are e2e-tested.
 
 ## Architecture & key decisions
 - **One rAF engine** (`AsAboveApp`) writes every animated attribute straight
   to refs — no per-frame React. Channel ownership is strict, one writer per
   element:
-  `.tablet-drift` (float: vertical bob only) → `.tablet-dip` (decode dip
-  spring) → gem; `.tablet-aura` (glow breath + swell) · `.tablet-sheen`
+  `.tablet-drift` (float: vertical bob only) → `.tablet-dip` (fire dip
+  spring + the breath's gulp squeeze: a centered, narrower-dominant scale
+  chasing the sea's gulp envelope — transform-only, since real width would
+  reflow the monospace wrap and real height would clip the standing
+  outgoing text) → gem; `.tablet-aura` (glow breath + swell) · `.tablet-sheen`
   (specular wander on its own period) · sky drift g → sun/moon g's (swap
   pose + opacity) · halos (per-body breath + ripple flare) · `.sky-rays`
   (flare opacity + slow wheel) · one scale per wave-ring group (crest
   travel + ripple kick) + one opacity per wash twin (the ripple's light
   sweeping the rings; fronts are pooled ×3, pure math) · the key's lens copy
   (every ring/ripple write mirrored into the windowed field inside the
-  glass) · the three text blocks (decode `textContent`, written only on
-  churn change).
+  glass) · `.tablet-text` (the engrave's `--edge-in`/`--edge-out`/
+  `--cap-out`/`--lit` vars — mask shapes live in CSS) · the four text
+  layers (outgoing + incoming, each carved + gold twin; `textContent`
+  written per pair, only at fire).
   Motion (the library) owns exactly two elements: the stage slide (drawer)
   and the face's FLIP height; CSS owns seeded ambient dressing (motes,
   stars, mist, glyph flutter, gem inclusions, moon fog veils), gated on
   BOTH `[data-motion='live']` and `prefers-reduced-motion`.
 - **`TABLET` config** (`src/lib/tablet.ts`) holds every tunable — float,
   dip, glow, swap, halos, waves (ring count/radii/wobble/travel + the
-  ripple: speed/scales/kick/flare/rays), sheen, decode cadence, oracle
-  idle — plus `TABLET.alive = false`, the one-line kill-switch (facts still
-  deal; motion stops). The console's MOTION chip ANDs with it at runtime.
+  ripple: speed/scales/kick/flare/rays), sheen, engrave sweep timings,
+  oracle idle — plus `TABLET.alive = false`, the one-line kill-switch (facts
+  still deal; motion stops). The console's MOTION chip ANDs with it at
+  runtime.
 - **The ripple** originates at the body: `firePulse()` claims a pool slot,
   measures the TERMINAL ring (the ring radius NEAREST `.key-zone`'s center,
   mapped into wave-svg units once per fire — the key is fixed in the
@@ -103,15 +114,52 @@ continuous liquid motion through everything, all the time. The rules:
   repaints every frame and holds 60fps (~16.7ms avg measured; keep it flat).
   Crest travel: ring i scales by `1 + (amp/R_i)·sin(2πt/T − i·Δφ)` —
   constant-px crests traveling outward forever.
-- **Decode as pure text math** (`src/lib/decode.ts`): per-cell resolve
-  schedule (reading-order cascade, ≤900ms hard ceiling), deterministic
-  noise per (cell, churn-tick), spaces pre-resolved so monospace word-wrap
-  never jumps mid-boil. The face grows to fit via a measured FLIP height
-  spring (soft — 110/22: it breathes, never pops); its `min-height`
-  (0.47·stage) gives the idle gem its portrait stature (glyphs/hint are
-  absolutely placed and contribute none). The tablet is CENTER-ANCHORED
-  (top 50%, translateY(-50%)): growth breathes symmetrically toward body
-  and key, so gaps stay balanced at every fact length.
+- **The magical engraving** (`src/lib/engrave.ts`): pure sweep math — no
+  scramble, no noise glyphs; the text is always real and a gold
+  writing-light does the work. ONE downward pass (~1.1s), two edges: the
+  ERASE edge lifts the outgoing letters away TOP → BOTTOM (they ignite the
+  moment before they go) and the WRITE edge follows one breath behind
+  (`lagMs` ~130ms), landing the incoming letters as pure gold that cools
+  into carved jade. Between the edges travels a thin wake of bare stone —
+  the tablet is NEVER blank: the old fact is still leaving the bottom
+  while the new one is landing at the top. Both edges ride one
+  ease-in-out sine and end together — one gesture. A frame is a pure
+  function of (plan, t); the only state is the two edges. A retrigger
+  re-plans from the current frame: EARLY in a pass (write edge <
+  `PROMOTE_THRESHOLD`) the erase carries straight on from its edge while
+  the write restarts at the top; LATE, the half-written fact is PROMOTED
+  to the outgoing layer (its written extent frozen as `--cap-out`, so the
+  never-written remainder cannot appear) and erased from the top. DOM:
+  FOUR aligned layers (outgoing carved + gold twin, incoming carved + gold
+  twin — identical typography so all four wrap identically; monospace
+  keeps this honest), masked by px gradients driven from four unitless
+  vars the engine writes on `.tablet-text`: `--edge-in`, `--edge-out`,
+  `--cap-out`, `--lit` (band shimmer ~3Hz; park = 99999 sits every
+  gradient off the box, no seam to pop). Both edges map onto ONE shared px
+  span (`max(outH, inH) + ramp`) — separate spans let the write edge
+  spatially outrun the erase on a short→long fact and land letters on
+  un-erased stone; the write band's ghost lead is additionally clamped to
+  the erase edge in CSS (`min(edge-in + 42, edge-out)`) — superimposed
+  letters were seen and rejected. The gold lives in the LETTERFORM
+  (`--letter-lit`) with only a tight halo — wide bright text-shadows fuse
+  a monospace word into a pale highlight box (seen, rejected). The face
+  fits via a measured FLIP height spring (soft — 90/20): a GROW is
+  measured at fire but LAUNCHES at the gulp's release (`gulp.ms ×
+  launchFrac`, the ripple's birth — the stone inhales with the sea via the
+  breath squeeze, then expands as above answers below), still ahead of
+  the write edge; a SHRINK waits (`pendingShrink`) and exhales at the
+  settle — shrinking mid-pass would clip the outgoing text still standing
+  on the lower stone — answered by the breath's SIGH (a squeeze impulse
+  dipping the slab just under final size), so even a shrink ends as an
+  expansion. The breath is transform, never layout: an underdamped height
+  spring would clip the face's bottom padding and flatten at min-height. The fire
+  measures the stone BEFORE writing the new text (a face with no explicit
+  height yet — first fire, post-resize — would otherwise measure the new
+  content as its start and snap). Its `min-height` (0.47·stage) gives the
+  idle gem its portrait stature (glyphs/hint are absolutely placed and
+  contribute none). The tablet is CENTER-ANCHORED (top 50%,
+  translateY(-50%)): growth breathes symmetrically toward body and key,
+  so gaps stay balanced at every fact length.
 - **Picker law** (`src/lib/picker.ts`): seeded shuffle bag per body; no
   repeat until the pool exhausts; a fresh bag never opens with the fact
   just shown. `src/lib/state.ts` keeps per-body memory — the sky swap is a
@@ -137,8 +185,8 @@ continuous liquid motion through everything, all the time. The rules:
   `data-console`, `data-motion`. `settled` is raised only once the words are
   actually on the glass — including the reduced-motion crossfade path.
 - **Reduced motion / STILL**: `inert = reduced || !motionLive || !alive` —
-  field still, ambient zeroed, decode becomes a crossfade, swap becomes a
-  fade, function fully preserved (e2e-covered).
+  field still, ambient zeroed, the engrave becomes a crossfade, swap becomes
+  a fade, function fully preserved (e2e-covered).
 
 ## Design & type
 - **Materials**: the gem is mode-shared (deep emerald face inside a
@@ -146,8 +194,11 @@ continuous liquid motion through everything, all the time. The rules:
   `.tablet-gem`, a `::before` bevel crown along the top, mirrored inset
   side-lights, slow internal inclusions, a small wandering sheen);
   lettering is ENGRAVED — pale jade (`--letter`, ~10:1 on the face; the
-  reality tag ~6:1) with an incised text-shadow, lifting to luminous during
-  `[data-decode='decoding']` and settling back to carved. NO hard edges on
+  reality tag ~6:1) with an incised text-shadow. A fire runs the magical
+  engraving: the gold writing-light (`--letter-lit` + `--engrave-*` — the
+  letterform carries the gold, the halo only hugs it) sweeps the block
+  while the whole stone warms a shade (`[data-decode='decoding']`), then
+  everything settles back to carved. NO hard edges on
   major elements, NO outlines/surface doodles on the bodies: the sun is a
   flat disc + white-hot core gradient; the moon a bare pearl + limb shading
   + fog veils. The console is themed liquid glass (`--glass-*`); the
@@ -188,9 +239,10 @@ continuous liquid motion through everything, all the time. The rules:
   rides gold→peach→rose→violet; moon pearl→periwinkle→indigo), never
   earthy-muted.
 - Two voices: **Cutive Mono** is the tablet voice (tablet text, console
-  labels, hints — typewriter-serif that engraves; monospace is load-bearing
-  for the decode). **Cinzel** is the display voice (wordmark only). Swap
-  faces in `layout.tsx` only (`--font-terminal` / `--font-display`).
+  labels, hints — typewriter-serif that engraves; monospace keeps the
+  engrave's two text layers wrapping identically). **Cinzel** is the
+  display voice (wordmark only). Swap faces in `layout.tsx` only
+  (`--font-terminal` / `--font-display`).
 - **`--stage-h`/`--stage-w`/`--wave-size` (globals.css) are the composition
   knobs**: body, tablet, dunes, key, and overlays derive from stage
   fractions, never raw viewport %.
@@ -228,11 +280,12 @@ continuous liquid motion through everything, all the time. The rules:
 
 ## Layout
 - `src/data/` — `facts.ts` (the verified corpus) + `integrity.test.ts`
-- `src/lib/` — `tablet` (TABLET config + spring/float/swap math) · `decode`
-  (pure scramble) · `picker` (shuffle bag) · `state` (oracle reducers) ·
+- `src/lib/` — `tablet` (TABLET config + spring/float/swap math) · `engrave`
+  (pure sweep math) · `picker` (shuffle bag) · `state` (oracle reducers) ·
   `rand` (xmur3/mulberry32) · `motion` (Motion-side vocabulary)
 - `src/components/` — `AsAboveApp` (orchestrator + THE engine) · `Waves` ·
   `Sky` · `Tablet` · `Dust` · `TriggerKey` · `Console` · `Dunes` (kept but
   currently unmounted — the earth may return)
-- `scripts/` — `peek.mjs` · `peek-reduced.mjs` (frame-capture verification)
+- `scripts/` — `peek.mjs` · `peek-engrave.mjs` · `peek-reduced.mjs`
+  (frame-capture verification)
 - `tests/e2e/` — `as-above.spec.mjs`

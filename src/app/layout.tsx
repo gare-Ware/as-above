@@ -12,9 +12,10 @@ const displayFont = Cinzel({
 
 // Tablet voice: Cutive Mono — a typewriter-serif monospace whose slab feet
 // read as chisel marks, so it engraves into the gem instead of glowing like
-// a terminal. Monospace is load-bearing: the decode boil depends on stable
-// word-wrap while characters churn. (v1 used VT323; the v2 redesign moved
-// the tablet from CRT to carved stone.) Keeps the --font-terminal hook name.
+// a terminal. Monospace keeps the stone's aligned text layers (carved +
+// gold twins, outgoing + incoming — the magical engraving) wrapping
+// identically, and keeps the fixed-grid gravitas. (v1 used VT323; the v2 redesign moved the
+// tablet from CRT to carved stone.) Keeps the --font-terminal hook name.
 const terminalFont = Cutive_Mono({
   variable: '--font-terminal',
   subsets: ['latin'],
