@@ -1,6 +1,6 @@
 // rand.ts — deterministic randomness (xmur3 → mulberry32, the species-eval /
 // HATCH tradition). Every procedural detail on stage — dust motes, stars,
-// strata jitter, idle glyphs, decode jitter, the fact shuffle — draws from a
+// strata jitter, idle glyphs, the fact shuffle — draws from a
 // per-session seed, so a sitting is coherent with itself but no two sittings
 // are identical.
 

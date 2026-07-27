@@ -3,18 +3,29 @@
 // The Emerald Tablet — the hero. A river-worn slab of emerald: perfectly
 // symmetric, rounded (no hard edges anywhere on a major element), a bevel
 // crown catching the sky along its top, a deep emerald face with light
-// living inside it, and pale-jade lettering ENGRAVED into the stone (a
-// decode lifts the letters into luminescence — see globals.css
-// [data-decode='decoding']). At idle the face carries drifting pseudo-glyphs
-// (seeded marks, not a real script). This component supplies structure and
-// the idle script; the one rAF loop (AsAboveApp) owns every animated
-// attribute via these refs. Channel discipline — one writer per element:
+// living inside it, and pale-jade lettering ENGRAVED into the stone. A fire
+// runs the magical engraving (lib/engrave.ts): one downward pass with two
+// edges — the erase edge lifts the OUTGOING text away (visible below it)
+// while the write edge follows a breath behind, landing the INCOMING text
+// (visible above it). Four aligned layers carry this: outgoing carved +
+// gold twin, incoming carved + gold twin, all identical typography so they
+// wrap identically, masked via the --edge-in/--edge-out/--cap-out/--lit
+// vars the engine writes on .tablet-text (mask shapes live in globals.css).
+// At idle the face carries
+// drifting pseudo-glyphs (seeded marks, not a real script). This component
+// supplies structure and the idle script; the one rAF loop (AsAboveApp)
+// owns every animated attribute via these refs. Channel discipline — one
+// writer per element:
 //   .tablet-drift  — engine: levitation (pure vertical bob — always plumb)
-//     .tablet-dip  — engine: decode suspension dip (spring)
+//     .tablet-dip  — engine: fire suspension dip (spring) + the breath's
+//                    gulp squeeze (centered narrower-dominant scale)
 //       .tablet-aura  — engine: glow breathing + swell (opacity)
 //       .tablet-face  — Motion: FLIP height growth only
 //         .tablet-sheen — engine: specular wander (its own slow period)
-//         text blocks   — engine: decode textContent
+//         .tablet-text  — engine: --edge-in/--edge-out/--cap-out/--lit
+//                         (the writing-light's two edges)
+//         text blocks   — engine: textContent (each pair written together,
+//                         only at fire time)
 
 import { useMemo, type CSSProperties, type RefObject } from 'react';
 import type { Fact } from '@/data/facts';
@@ -30,6 +41,21 @@ export interface TabletRefs {
   claim: RefObject<HTMLParagraphElement | null>;
   lore: RefObject<HTMLParagraphElement | null>;
   filed: RefObject<HTMLParagraphElement | null>;
+  /** The gold lit twins — identical text/typography, so the layers wrap
+      identically and the writing-light overlays letter-for-letter. */
+  claimLit: RefObject<HTMLParagraphElement | null>;
+  loreLit: RefObject<HTMLParagraphElement | null>;
+  filedLit: RefObject<HTMLParagraphElement | null>;
+  /** The outgoing pair — holds the PREVIOUS fact while the erase edge
+      lifts it away beneath the incoming write. */
+  outWrap: RefObject<HTMLDivElement | null>;
+  outLitWrap: RefObject<HTMLDivElement | null>;
+  claimOut: RefObject<HTMLParagraphElement | null>;
+  loreOut: RefObject<HTMLParagraphElement | null>;
+  filedOut: RefObject<HTMLParagraphElement | null>;
+  claimOutLit: RefObject<HTMLParagraphElement | null>;
+  loreOutLit: RefObject<HTMLParagraphElement | null>;
+  filedOutLit: RefObject<HTMLParagraphElement | null>;
 }
 
 /** One idle pseudo-glyph: 1–3 short wedge/bar/hook strokes. */
@@ -62,7 +88,7 @@ export function Tablet({
   refs: TabletRefs;
   seed: string;
   hasFact: boolean;
-  /** The settled fact — read by assistive tech, not by the boiling face. */
+  /** The settled fact — read by assistive tech, not by the sweeping face. */
   fact: Fact | null;
   /** The one line of first-load copy, retired after the first press. */
   showHint: boolean;
@@ -152,9 +178,34 @@ export function Tablet({
                   data-visible={hasFact}
                   aria-hidden="true"
                 >
-                  <p ref={refs.claim} className="fact-claim" />
-                  <p ref={refs.lore} className="fact-lore" />
-                  <p ref={refs.filed} className="fact-filed" />
+                  {/* The outgoing fact: visible below the erase edge, its
+                      gold twin igniting the letters the moment before they
+                      lift away. The engine gives both an explicit height at
+                      fire (old text can be taller than the new flow). */}
+                  <div ref={refs.outWrap} className="engrave-out">
+                    <p ref={refs.claimOut} className="fact-claim-out" />
+                    <p ref={refs.loreOut} className="fact-lore-out" />
+                    <p ref={refs.filedOut} className="fact-filed-out" />
+                  </div>
+                  <div ref={refs.outLitWrap} className="engrave-out-lit">
+                    <p ref={refs.claimOutLit} className="fact-claim-out-lit" />
+                    <p ref={refs.loreOutLit} className="fact-lore-out-lit" />
+                    <p ref={refs.filedOutLit} className="fact-filed-out-lit" />
+                  </div>
+                  {/* The incoming fact: visible above the write edge, its
+                      gold twin the band where the light is writing. Distinct
+                      classnames per layer on purpose — .fact-* selectors
+                      (tests, a11y) must keep matching exactly one node. */}
+                  <div className="engrave-base">
+                    <p ref={refs.claim} className="fact-claim" />
+                    <p ref={refs.lore} className="fact-lore" />
+                    <p ref={refs.filed} className="fact-filed" />
+                  </div>
+                  <div className="engrave-lit">
+                    <p ref={refs.claimLit} className="fact-claim-lit" />
+                    <p ref={refs.loreLit} className="fact-lore-lit" />
+                    <p ref={refs.filedLit} className="fact-filed-lit" />
+                  </div>
                 </div>
                 <p className="tablet-hint" data-visible={showHint && !hasFact}>
                   press the key — the tablet answers
@@ -165,7 +216,7 @@ export function Tablet({
         </div>
       </div>
       {/* The tablet speaks to assistive tech once per settled fact, without
-          the per-frame boil. */}
+          the per-frame sweep. */}
       <div className="sr-only" role="status" aria-live="polite">
         {fact ? `${fact.claim} ${fact.lore} Filed under: ${fact.filedUnder}` : ''}
       </div>

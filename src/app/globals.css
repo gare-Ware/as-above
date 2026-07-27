@@ -12,8 +12,14 @@
   --gem-edge-lo: #051d13; /* bevel planes in shade */
   --gem-glow: #4ce09a; /* the aura's radial color */
   --letter: #c9edd6; /* engraved cut faces */
-  --letter-lit: #ecfff4; /* the decode surge */
+  --letter-lit: #ffe28d; /* letters at full light: bright true gold */
   --letter-dim: #90c5a5; /* the reality tag's quieter register */
+  /* The writing-light — the gold that engraves. Mode-shared on purpose:
+     the spell has its own color, under either sky. The LETTERFORM carries
+     the gold; the halo only hugs it — wide bright blurs fuse a monospace
+     word into a pale highlight box (seen, rejected). */
+  --engrave-glow: rgba(255, 208, 106, 0.55); /* tight halo hugging the glyphs */
+  --engrave-bloom: rgba(255, 166, 58, 0.16); /* the faintest wide warmth */
   --control-active: #8ff0b9; /* active console chips answer the gem */
 
   /* ── Semantic sky tokens — SUN is the resting state ────────────────────────
@@ -404,49 +410,181 @@ body {
 .tablet-glyphs path {
   opacity: 0.34;
 }
-/* ── Engraved lettering: light cut faces on dark stone. A decode lifts the
-   letters into luminescence, then they settle back to carved. ── */
+/* ── Engraved lettering: light cut faces on dark stone. A fire runs the
+   magical engraving: ONE downward pass, two gold edges. The erase edge
+   lifts the outgoing letters away (they ignite the moment before they go);
+   the write edge follows a breath behind, landing the incoming letters as
+   pure light that cools into carved jade. Between the edges travels a thin
+   wake of bare stone — the tablet is never blank.
+
+   Four aligned layers (identical typography, so they wrap identically):
+     .engrave-out / .engrave-out-lit — the OUTGOING fact, visible BELOW the
+       erase edge, its gold twin banding that edge. The engine sets an
+       explicit height on both at fire (old text can outsize the new flow,
+       and px masks need the box to cover it).
+     .engrave-base / .engrave-lit — the INCOMING fact, visible ABOVE the
+       write edge, its gold twin banding that edge.
+
+   The engine writes four vars on .tablet-text, all unitless px numbers:
+     --edge-in   the write edge. Park = 99999 (fully written, band off-box).
+     --edge-out  the erase edge. Park = 99999 (outgoing layer hidden — its
+                 visible region [edge, cap] is empty).
+     --cap-out   the outgoing layer's written extent: a retrigger that
+                 promotes a HALF-written fact to outgoing freezes its write
+                 edge here, so the never-written remainder cannot appear.
+                 99999 = no cap.
+     --lit       band opacity (0 at rest; shimmers while the light works).
+   Every gradient is no-repeat: px stops must not tile across the box. ── */
 .tablet-text {
   position: relative;
   z-index: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 0.7em;
+  --edge-in: 99999;
+  --edge-out: 99999;
+  --cap-out: 99999;
+  --lit: 0;
   opacity: 1;
   font-family: var(--font-terminal), 'Courier New', monospace;
   color: var(--letter);
   text-shadow:
     0 -1px 0 rgba(3, 22, 13, 0.75),
     0 1px 0 rgba(214, 255, 230, 0.12),
-    0 0 0 rgba(170, 255, 205, 0);
+    0 0 0 rgba(255, 203, 98, 0);
   transition: opacity 520ms ease, color 650ms ease, text-shadow 650ms ease;
   overflow-wrap: break-word;
 }
-main[data-decode='decoding'] .tablet-text {
+.engrave-base,
+.engrave-lit,
+.engrave-out,
+.engrave-out-lit {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7em;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+}
+.engrave-lit,
+.engrave-out,
+.engrave-out-lit {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.engrave-lit,
+.engrave-out-lit {
   color: var(--letter-lit);
   text-shadow:
-    0 -1px 0 rgba(3, 22, 13, 0.35),
-    0 1px 0 rgba(214, 255, 230, 0.05),
-    0 0 15px rgba(170, 255, 205, 0.55);
-  transition-duration: 520ms, 160ms, 160ms;
+    0 0 5px var(--engrave-glow),
+    0 0 24px var(--engrave-bloom);
+}
+.engrave-lit {
+  opacity: var(--lit);
+}
+/* The erase side glows a touch dimmer — the write is the ceremony. */
+.engrave-out-lit {
+  opacity: calc(var(--lit) * 0.85);
+}
+/* Incoming carved: visible above the write edge, 64px feather into it. */
+.engrave-base {
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    #000 calc((var(--edge-in) - 64) * 1px),
+    transparent calc(var(--edge-in) * 1px)
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    #000 calc((var(--edge-in) - 64) * 1px),
+    transparent calc(var(--edge-in) * 1px)
+  );
+}
+/* The write band: brightest just above its edge, ghost-light leading a
+   little below it — the letter arrives as light, then cools. The lead is
+   clamped to the erase edge: the ghost must never land on stone the erase
+   has not yet bared (superimposed letters — seen, rejected). */
+.engrave-lit {
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent calc((var(--edge-in) - 112) * 1px),
+    #000 calc((var(--edge-in) - 34) * 1px),
+    transparent calc(min(var(--edge-in) + 42, var(--edge-out)) * 1px)
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    transparent calc((var(--edge-in) - 112) * 1px),
+    #000 calc((var(--edge-in) - 34) * 1px),
+    transparent calc(min(var(--edge-in) + 42, var(--edge-out)) * 1px)
+  );
+}
+/* Outgoing carved: visible below the erase edge (56px feather out of it),
+   down to the written cap. */
+.engrave-out {
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent calc(var(--edge-out) * 1px),
+    #000 calc((var(--edge-out) + 56) * 1px),
+    #000 calc((var(--cap-out) - 20) * 1px),
+    transparent calc(var(--cap-out) * 1px)
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    transparent calc(var(--edge-out) * 1px),
+    #000 calc((var(--edge-out) + 56) * 1px),
+    #000 calc((var(--cap-out) - 20) * 1px),
+    transparent calc(var(--cap-out) * 1px)
+  );
+}
+/* The erase band: brightest just below its edge (the letters about to
+   lift), ghost-light lingering a little above (the letters just gone) —
+   clamped to the cap so a promoted layer's unwritten remainder never
+   glows into view. */
+.engrave-out-lit {
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent calc((var(--edge-out) - 42) * 1px),
+    #000 calc(min(var(--edge-out) + 34, var(--cap-out) - 8) * 1px),
+    transparent calc(min(var(--edge-out) + 112, var(--cap-out)) * 1px)
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    transparent calc((var(--edge-out) - 42) * 1px),
+    #000 calc(min(var(--edge-out) + 34, var(--cap-out) - 8) * 1px),
+    transparent calc(min(var(--edge-out) + 112, var(--cap-out)) * 1px)
+  );
+}
+/* While the light writes, the whole stone warms a shade toward gold — the
+   bands carry the drama; this is just the spell's ambient heat. */
+main[data-decode='decoding'] .tablet-text {
+  color: color-mix(in oklab, var(--letter-lit) 28%, var(--letter));
+  text-shadow:
+    0 -1px 0 rgba(3, 22, 13, 0.5),
+    0 1px 0 rgba(214, 255, 230, 0.08),
+    0 0 9px rgba(255, 203, 98, 0.22);
+  transition-duration: 520ms, 200ms, 200ms;
 }
 .tablet-text[data-visible='false'] {
   opacity: 0;
 }
-.fact-claim {
+/* Typography is structural — every layer is the same three blocks (claim,
+   lore, filed), so all four wrap identically. The .fact-* classnames stay
+   on the nodes for tests and hooks, not for styling. */
+.tablet-text p:nth-child(1) {
   font-size: clamp(16.5px, calc(var(--stage-h) * 0.0225), 21px);
   line-height: 1.22;
   text-transform: uppercase;
   letter-spacing: 0.01em;
 }
-.fact-lore {
+.tablet-text p:nth-child(2) {
   font-size: clamp(12.5px, calc(var(--stage-h) * 0.017), 15.5px);
   line-height: 1.36;
   opacity: 0.96;
 }
-.fact-filed {
+.tablet-text p:nth-child(3) {
   font-size: clamp(11px, calc(var(--stage-h) * 0.0148), 13.5px);
   line-height: 1.4;
+}
+/* The reality tag reads a register quieter — carved layers only; the gold
+   twins override to the writing-light's color by inheritance. */
+.engrave-base p:nth-child(3),
+.engrave-out p:nth-child(3) {
   color: var(--letter-dim);
   transition: color var(--theme-fade) ease;
 }

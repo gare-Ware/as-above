@@ -21,8 +21,14 @@ export const PANEL_HEIGHT_MOBILE = 240;
 export const KEY_RELEASE: Transition = { type: 'spring', stiffness: 540, damping: 15 };
 
 /** The screen growing to fit a longer fact (FLIP height retarget). Soft on
-    purpose — the slab breathes to its new size, it never pops. */
-export const GROW: Transition = { type: 'spring', stiffness: 110, damping: 22 };
+    purpose — the slab breathes to its new size, it never pops. A GROW is
+    measured at fire and LAUNCHES at the gulp's release (the delay is
+    passed per-fire) — the stone inhales with the sea, then expands the
+    instant the ripple is born above, still ahead of the write edge. A
+    SHRINK waits for the settle (the outgoing text still stands on the
+    lower stone) and exhales once the words land; the engine's breath sigh
+    dips the slab just under final size so even a shrink ends expanding. */
+export const GROW: Transition = { type: 'spring', stiffness: 90, damping: 20 };
 
 /** One press language for every console pressable (control voice only —
     the TRIGGER key has real key physics instead of a scale token). */

@@ -1,9 +1,9 @@
 'use client';
 
 // The orchestrator. Owns the one rAF engine (every animated attribute on
-// stage is written here, straight to refs — no per-frame React), the decode
-// choreography, the sky swap spring, the keyboard paths, the console, and
-// the oracle idle timer. Channel discipline: one writer per element —
+// stage is written here, straight to refs — no per-frame React), the
+// engraving choreography, the sky swap spring, the keyboard paths, the
+// console, and the oracle idle timer. Channel discipline: one writer per element —
 // engine channels are listed in Tablet.tsx/Sky.tsx; Motion owns exactly two
 // elements (the stage slide and the screen's FLIP height); CSS owns the
 // seeded ambient dressing (gated in globals.css).
@@ -12,7 +12,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { animate } from 'motion';
 import { motion, useReducedMotion } from 'motion/react';
 import type { BodyId, Fact } from '@/data/facts';
-import { isSettled, planDecode, renderBlock } from '@/lib/decode';
+import { engraveFrame, planEngrave, PROMOTE_THRESHOLD, type EngravePlan } from '@/lib/engrave';
 import { GROW, PANEL_HEIGHT_MOBILE, PANEL_SPRING, REDUCED_FADE_MS } from '@/lib/motion';
 import { makeSessionSeed, seededRng } from '@/lib/rand';
 import {
@@ -48,6 +48,10 @@ interface EngineState {
   last: number;
   swap: { x: number; v: number }; // 0=sun … 1=moon
   dip: { x: number; v: number };
+  /** The stone's inhale (0=rest … 1=full gulp): a spring chasing the sea's
+      gulp envelope, written as a centered narrower-dominant scale on the
+      dip channel. The settle sigh (shrink case) kicks its velocity. */
+  squeeze: { x: number; v: number };
   /** ONE swell drives the gem's glow surge AND the wave amplitude — the
       coherence spine: everything answers the same breath. */
   swell: number;
@@ -63,7 +67,20 @@ interface EngineState {
   washPrev: number[];
   /** performance.now() of the last fire — the gulp envelope's birth. */
   gulpStart: number;
-  decode: { plan: ReturnType<typeof planDecode>; start: number } | null;
+  engrave: { plan: EngravePlan; start: number } | null;
+  /** The ONE px span both normalized edges map onto: max(outgoing height,
+      incoming height) + EDGE_RAMP. Shared on purpose — with separate spans
+      the write edge can spatially outrun the erase edge (short old text,
+      long new text) and land letters on un-erased stone. The ramp lets the
+      bands slide OFF the box before the settle — no pop. */
+  span: number;
+  /** A shorter fact holds the taller stone through the pass; the exhale
+      runs at settle (shrinking mid-pass would clip the outgoing text). */
+  pendingShrink: boolean;
+  /** Last written vars — idle frames skip the DOM entirely. */
+  lastEdgeIn: number;
+  lastEdgeOut: number;
+  lastLit: number;
   lastText: [string, string, string];
   idleEpoch: number;
 }
@@ -72,6 +89,12 @@ const idlePulse = (): Pulse => ({ q: 1, wait: 0, stopU: 0 });
 
 const TAU = Math.PI * 2;
 const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
+/** px past a text layer's height that its edge travels — the gold bands'
+    off-ramp, so the light slides OFF the box before the settle. */
+const EDGE_RAMP = 130;
+/** A promoted half-written fact keeps glowing this far past its write edge
+    (the band's ghost lead) — the cap freezes there. */
+const CAP_LEAD = 42;
 const C = SKY_CENTER;
 const bodyTransform = (pose: { y: number; scale: number }) =>
   `translate(${C} ${C + pose.y}) scale(${pose.scale}) translate(${-C} ${-C})`;
@@ -90,7 +113,6 @@ export function AsAboveApp() {
   const reduced = useReducedMotion() ?? false;
 
   const pickRng = useRef<() => number>(Math.random);
-  const decodeRng = useRef<() => number>(Math.random);
 
   // ── Refs the engine writes to (one writer per element) ─────────────────────
   const skyRefs: SkyRefs = {
@@ -110,6 +132,17 @@ export function AsAboveApp() {
     claim: useRef(null),
     lore: useRef(null),
     filed: useRef(null),
+    claimLit: useRef(null),
+    loreLit: useRef(null),
+    filedLit: useRef(null),
+    outWrap: useRef(null),
+    outLitWrap: useRef(null),
+    claimOut: useRef(null),
+    loreOut: useRef(null),
+    filedOut: useRef(null),
+    claimOutLit: useRef(null),
+    loreOutLit: useRef(null),
+    filedOutLit: useRef(null),
   };
   const wavesRefs: WavesRefs = {
     svg: useRef<SVGSVGElement | null>(null),
@@ -136,6 +169,7 @@ export function AsAboveApp() {
     last: 0,
     swap: { x: 0, v: 0 },
     dip: { x: 0, v: 0 },
+    squeeze: { x: 0, v: 0 },
     swell: 0,
     flare: 0,
     pulses: Array.from({ length: TABLET.waves.pulse.pool }, idlePulse),
@@ -143,7 +177,12 @@ export function AsAboveApp() {
     wash: Array.from({ length: TABLET.waves.ringCount }, () => 0),
     washPrev: Array.from({ length: TABLET.waves.ringCount }, () => 0),
     gulpStart: -1e9,
-    decode: null,
+    engrave: null,
+    span: 0,
+    pendingShrink: false,
+    lastEdgeIn: 99999,
+    lastEdgeOut: 99999,
+    lastLit: 0,
     lastText: ['', '', ''],
     idleEpoch: 0,
   });
@@ -206,7 +245,6 @@ export function AsAboveApp() {
     let cancelled = false;
     const s = makeSessionSeed();
     pickRng.current = seededRng(`${s}:pick`);
-    decodeRng.current = seededRng(`${s}:decode`);
     setOracle(initOracle(pickRng.current));
     setSeed(s);
     const ready = () => {
@@ -236,49 +274,138 @@ export function AsAboveApp() {
     if (oracle) document.documentElement.dataset.mode = oracle.mode;
   }, [oracle]);
 
-  // ── Decode choreography (imperative, ref-driven) ───────────────────────────
+  // ── Engraving choreography (imperative, ref-driven) ────────────────────────
 
-  const writeDecodeFrame = useCallback(
-    (now: number) => {
-      const st = eng.current;
-      if (!st.decode) return;
-      const t = now - st.decode.start;
-      const els = [tabletRefs.claim.current, tabletRefs.lore.current, tabletRefs.filed.current];
-      for (let b = 0; b < 3; b += 1) {
-        const el = els[b];
-        if (!el) continue;
-        const s = renderBlock(st.decode.plan, b, t);
-        if (s !== st.lastText[b]) {
-          el.textContent = s;
-          st.lastText[b] = s;
-        }
-      }
-      if (isSettled(st.decode.plan, t)) {
-        st.decode = null;
-        setDecodePhase('settled');
-      }
-    },
+  /** Write the same text to the incoming carved base and its gold twin —
+      a pair must never disagree, or the writing-light would show different
+      words than the stone. `lastText` mirrors this pair: it is what the
+      stone will hold once the pass lands. */
+  const writeTexts = useCallback((texts: readonly string[]) => {
+    const st = eng.current;
+    const base = [tabletRefs.claim.current, tabletRefs.lore.current, tabletRefs.filed.current];
+    const lit = [tabletRefs.claimLit.current, tabletRefs.loreLit.current, tabletRefs.filedLit.current];
+    for (let b = 0; b < 3; b += 1) {
+      const s = texts[b] ?? '';
+      const el = base[b];
+      if (el) el.textContent = s;
+      const twin = lit[b];
+      if (twin) twin.textContent = s;
+      st.lastText[b] = s;
+    }
     // Refs are stable; nothing here re-binds.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /** Write the outgoing pair — the text the erase edge will lift away. */
+  const writeOutTexts = useCallback((texts: readonly string[]) => {
+    const base = [tabletRefs.claimOut.current, tabletRefs.loreOut.current, tabletRefs.filedOut.current];
+    const lit = [
+      tabletRefs.claimOutLit.current,
+      tabletRefs.loreOutLit.current,
+      tabletRefs.filedOutLit.current,
+    ];
+    for (let b = 0; b < 3; b += 1) {
+      const s = texts[b] ?? '';
+      const el = base[b];
+      if (el) el.textContent = s;
+      const twin = lit[b];
+      if (twin) twin.textContent = s;
+    }
+    // Refs are stable; nothing here re-binds.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /** FLIP the screen height to fit the (already written) content. `preH0`
+      is the height measured BEFORE the text swap — without it, a face that
+      has no explicit height yet (first fire, post-resize) measures the NEW
+      content's height as its start and snaps instead of breathing. With
+      `deferShrink`, a shrinking face holds its height and raises
+      pendingShrink instead — the outgoing text is still on the stone, and
+      shrinking under it would clip its unerased tail; the exhale runs at
+      the settle. A fire passes `delayMs` (the gulp's launch overlap) so the
+      expansion launches at the RELEASE, in step with the ripple's birth —
+      the height is measured and pinned now, the spring waits. */
+  const flipGrow = useCallback(
+    (instant: boolean, preH0?: number, deferShrink = false, delayMs = 0) => {
+      const screen = tabletRefs.screen.current;
+      if (!screen) return;
+      growAnim.current?.stop();
+      const h0 = preH0 ?? screen.offsetHeight;
+      screen.style.height = 'auto';
+      const h1 = screen.offsetHeight;
+      if (instant || Math.abs(h1 - h0) < 1) {
+        screen.style.height = h1 > 0 ? `${h1}px` : '';
+        return;
+      }
+      screen.style.height = `${h0}px`;
+      if (deferShrink && h1 < h0) {
+        eng.current.pendingShrink = true;
+        return;
+      }
+      growAnim.current = animate(
+        screen,
+        { height: `${h1}px` },
+        delayMs > 0 ? { ...GROW, delay: delayMs / 1000 } : GROW,
+      );
+    },
+    // Refs are stable containers; nothing here re-binds.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
 
-  /** FLIP the screen height to fit the (already written) content. */
-  const flipGrow = useCallback((instant: boolean) => {
-    const screen = tabletRefs.screen.current;
-    if (!screen) return;
-    growAnim.current?.stop();
-    const h0 = screen.offsetHeight;
-    screen.style.height = 'auto';
-    const h1 = screen.offsetHeight;
-    if (instant || Math.abs(h1 - h0) < 1) {
-      screen.style.height = h1 > 0 ? `${h1}px` : '';
-      return;
-    }
-    screen.style.height = `${h0}px`;
-    growAnim.current = animate(screen, { height: `${h1}px` }, GROW);
+  const writeEngraveFrame = useCallback(
+    (now: number) => {
+      const st = eng.current;
+      if (!st.engrave) return;
+      const fr = engraveFrame(st.engrave.plan, now - st.engrave.start);
+      const wrap = tabletRefs.textWrap.current;
+      if (wrap) {
+        const edgeIn = fr.writeE * st.span;
+        if (Math.abs(edgeIn - st.lastEdgeIn) > 0.05) {
+          st.lastEdgeIn = edgeIn;
+          wrap.style.setProperty('--edge-in', edgeIn.toFixed(1));
+        }
+        if (st.engrave.plan.hasOut) {
+          const edgeOut = fr.eraseE * st.span;
+          if (Math.abs(edgeOut - st.lastEdgeOut) > 0.05) {
+            st.lastEdgeOut = edgeOut;
+            wrap.style.setProperty('--edge-out', edgeOut.toFixed(1));
+          }
+        }
+        // The bands breathe a little while the light works — candle, not
+        // laser.
+        const lit = fr.phase === 'sweep' ? 0.9 + 0.1 * Math.sin((TAU * now) / 340) : 0;
+        if (Math.abs(lit - st.lastLit) > 0.01) {
+          st.lastLit = lit;
+          wrap.style.setProperty('--lit', lit.toFixed(3));
+        }
+      }
+      if (fr.phase === 'settled') {
+        st.engrave = null;
+        if (wrap) {
+          // Park the light: incoming fully carved, outgoing hidden — both
+          // extremes sit off the box, so there is no seam to pop.
+          st.lastEdgeIn = 99999;
+          st.lastEdgeOut = 99999;
+          wrap.style.setProperty('--edge-in', '99999');
+          wrap.style.setProperty('--edge-out', '99999');
+          wrap.style.setProperty('--cap-out', '99999');
+        }
+        if (st.pendingShrink) {
+          st.pendingShrink = false;
+          flipGrow(false); // the stone exhales to the shorter fact…
+          // …and SIGHS: a squeeze impulse dips the slab just below its
+          // final size and releases, so even a shrink ends as an expansion
+          // — landing on the gold-cooling beat.
+          st.squeeze.v += TABLET.breath.sighKick;
+        }
+        setDecodePhase('settled');
+      }
+    },
+    // Refs are stable; only the callbacks matter.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    [flipGrow],
+  );
 
   const beginDecode = useCallback(
     (fact: Fact, withPulse = true) => {
@@ -290,17 +417,22 @@ export function AsAboveApp() {
         `filed under: ${fact.filedUnder}`,
       ];
       if (live.current.inert) {
-        // Reduced-motion / STILL path: the decode becomes a crossfade —
-        // function fully preserved, no boil, no dip. 'settled' is raised
+        // Reduced-motion / STILL path: the engraving becomes a crossfade —
+        // function fully preserved, no sweep, no dip. 'settled' is raised
         // only once the words are actually on the glass.
-        st.decode = null;
+        st.engrave = null;
+        st.pendingShrink = false;
         const wrap = tabletRefs.textWrap.current;
+        // Park the writing-light (a live pass may have been mid-flight).
+        st.lastEdgeIn = 99999;
+        st.lastEdgeOut = 99999;
+        st.lastLit = 0;
+        wrap?.style.setProperty('--edge-in', '99999');
+        wrap?.style.setProperty('--edge-out', '99999');
+        wrap?.style.setProperty('--cap-out', '99999');
+        wrap?.style.setProperty('--lit', '0');
         const write = () => {
-          const els = [tabletRefs.claim.current, tabletRefs.lore.current, tabletRefs.filed.current];
-          els.forEach((el, i) => {
-            if (el) el.textContent = texts[i];
-            st.lastText[i] = texts[i];
-          });
+          writeTexts(texts);
           flipGrow(true);
           setDecodePhase('settled');
         };
@@ -321,39 +453,103 @@ export function AsAboveApp() {
         }
         return;
       }
-      // The live decode: retarget mid-flight friendly — a fresh plan simply
-      // adopts the boiling screen as its starting field.
-      st.decode = { plan: planDecode(texts, decodeRng.current, TABLET.decode), start: performance.now() };
+      // The live engraving: one downward pass. A retrigger re-plans from
+      // the current frame — an early pass keeps erasing from the same edge
+      // while the write restarts at the top; a late pass promotes the
+      // half-written fact to the outgoing layer (its written extent frozen
+      // as the cap) and erases it from the top.
+      let outTexts: readonly string[] = [...st.lastText];
+      let eraseFromPx = 0;
+      let keepOut = false;
+      let promoteCapPx: number | null = null;
+      if (st.engrave) {
+        const cur = engraveFrame(st.engrave.plan, performance.now() - st.engrave.start);
+        if (cur.phase === 'sweep' && st.engrave.plan.hasOut && cur.writeE < PROMOTE_THRESHOLD) {
+          outTexts = st.engrave.plan.outTexts;
+          eraseFromPx = cur.eraseE * st.span; // px continuity across the re-plan
+          keepOut = true; // the outgoing layer carries straight on
+        } else if (cur.phase === 'sweep') {
+          outTexts = st.engrave.plan.inTexts;
+          promoteCapPx = cur.writeE * st.span + CAP_LEAD;
+        }
+      }
+      const wrap = tabletRefs.textWrap.current;
+      // Measure BEFORE touching any text: the outgoing layer inherits the
+      // stone's current content height, and the FLIP needs the pre-swap
+      // face height (a face with no explicit height yet would otherwise
+      // measure the new content as its start and snap).
+      const hPrev = wrap?.offsetHeight ?? 0;
+      const h0Face = tabletRefs.screen.current?.offsetHeight;
+      if (!keepOut) {
+        writeOutTexts(outTexts);
+        const outEl = tabletRefs.outWrap.current;
+        const outLitEl = tabletRefs.outLitWrap.current;
+        if (outEl) outEl.style.height = `${hPrev}px`;
+        if (outLitEl) outLitEl.style.height = `${hPrev}px`;
+        const cap = promoteCapPx ?? 99999;
+        wrap?.style.setProperty('--cap-out', cap.toFixed(1));
+      }
+      writeTexts(texts);
+      const hIn = wrap?.offsetHeight ?? 0;
+      // ONE span for both edges (see EngineState.span). A continuing erase
+      // must never see its span shrink mid-flight, and its resumed edge is
+      // re-normalized so the px position carries over exactly.
+      const newSpan = keepOut
+        ? Math.max(st.span, hIn + EDGE_RAMP)
+        : Math.max(hPrev, hIn) + EDGE_RAMP;
+      const eraseFrom = keepOut && newSpan > 0 ? eraseFromPx / newSpan : 0;
+      st.span = newSpan;
+      // The FLIP: measure NOW, launch at the gulp's RELEASE — the stone
+      // inhales with the sea (the breath squeeze, on the dip channel),
+      // then expands toward its new size the instant the ripple is born
+      // above, still ahead of the write edge. A gulp runs on every live
+      // path (a fire starts one here; a sky swap fires its own pulse just
+      // before re-speaking), so the delay always has a release to meet. A
+      // shrink waits for the settle (deferShrink), since the outgoing text
+      // still stands on the lower stone.
+      st.pendingShrink = false;
+      flipGrow(false, h0Face, true, TABLET.waves.gulp.ms * TABLET.waves.gulp.launchFrac);
+      st.engrave = {
+        plan: planEngrave(outTexts, texts, eraseFrom, TABLET.engrave),
+        start: performance.now(),
+      };
       st.swell = 1; // the shared breath: gem glow AND wave amplitude
       st.dip.v += TABLET.dip.kickPxPerSec; // the tablet takes the weight
       if (withPulse) firePulse(); // the sky answers: the ripple is born above
-      writeDecodeFrame(performance.now()); // answer on THIS frame
-      flipGrow(false);
+      writeEngraveFrame(performance.now()); // answer on THIS frame
       setDecodePhase('decoding');
     },
     // Refs are stable containers; only the callbacks matter.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [flipGrow, writeDecodeFrame, firePulse],
+    [flipGrow, writeTexts, writeOutTexts, writeEngraveFrame, firePulse],
   );
 
   /** The sky swapped to a body that hasn't spoken: settle back to idle glyphs. */
   const beginIdle = useCallback(() => {
     const st = eng.current;
-    st.decode = null;
+    st.engrave = null;
     st.idleEpoch += 1;
     const epoch = st.idleEpoch;
     setDecodePhase('idle');
     window.setTimeout(() => {
-      if (eng.current.idleEpoch !== epoch) return; // a decode intervened
-      const els = [tabletRefs.claim.current, tabletRefs.lore.current, tabletRefs.filed.current];
-      els.forEach((el, i) => {
-        if (el) el.textContent = '';
-        eng.current.lastText[i] = '';
-      });
+      if (eng.current.idleEpoch !== epoch) return; // an engraving intervened
+      writeTexts(['', '', '']);
+      writeOutTexts(['', '', '']);
+      // Park the writing-light behind the fade-out (a pass may have been
+      // mid-flight when the sky turned).
+      const wrap = tabletRefs.textWrap.current;
+      eng.current.lastEdgeIn = 99999;
+      eng.current.lastEdgeOut = 99999;
+      eng.current.lastLit = 0;
+      eng.current.pendingShrink = false;
+      wrap?.style.setProperty('--edge-in', '99999');
+      wrap?.style.setProperty('--edge-out', '99999');
+      wrap?.style.setProperty('--cap-out', '99999');
+      wrap?.style.setProperty('--lit', '0');
       flipGrow(false);
     }, 500); // after the text layer's fade-out
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [flipGrow]);
+  }, [flipGrow, writeTexts, writeOutTexts]);
 
   // ── The verbs ──────────────────────────────────────────────────────────────
 
@@ -367,7 +563,7 @@ export function AsAboveApp() {
     );
   }, []);
 
-  // New pick → decode it.
+  // New pick → engrave it.
   const lastSerial = useRef(0);
   useEffect(() => {
     if (!oracle || oracle.serial === lastSerial.current) return;
@@ -498,7 +694,31 @@ export function AsAboveApp() {
         driftDiv.style.transform = `translate3d(0px, ${f.y.toFixed(2)}px, 0)`;
       }
 
-      // …and takes the weight of new words.
+      // The gulp clock — ONE envelope for sea and stone (coherence spine):
+      // the wave rings swallow inward by gulpU below while the tablet's
+      // squeeze chases the same curve here.
+      // sin², not sin: a plain half-sine still has velocity when it hits the
+      // end and clamps to 0 — a kink that lands at ~320ms, exactly where the
+      // innermost ring peaks. Squaring it starts and ENDS at zero velocity,
+      // so the swallow releases into the cascade instead of stopping dead.
+      const W = TABLET.waves;
+      const G = W.gulp;
+      const gulpP = (now - st.gulpStart) / G.ms;
+      const gulpSin = Math.sin(Math.PI * gulpP);
+      const gulpEnv = gulpP >= 0 && gulpP < 1 ? gulpSin * gulpSin : 0;
+      const gulpU = L.inert ? 0 : -G.ampU * gulpEnv;
+
+      // …and takes the weight of new words — and INHALES with the sea: the
+      // squeeze spring chases the shared gulp envelope (interactive =
+      // springs: a mash retargets with velocity instead of snapping). The
+      // stone's target adds the release WHISPER — a small negative lobe
+      // (expansion past rest) after the gulp lets go, same clock.
+      const B = TABLET.breath;
+      let squeezeTarget = gulpEnv;
+      if (gulpP >= 1 && gulpP < 1 + B.reboundFrac) {
+        const r = Math.sin((Math.PI * (gulpP - 1)) / B.reboundFrac);
+        squeezeTarget = -B.rebound * r * r;
+      }
       [st.dip.x, st.dip.v] = springStep(
         st.dip.x,
         st.dip.v,
@@ -507,14 +727,42 @@ export function AsAboveApp() {
         TABLET.dip.damping,
         dt,
       );
+      // The breath is the engine's stiffest spring (ω=30): one Euler step
+      // at the dt clamp (0.05s) sits past the stability edge — a long
+      // frame at the settle flipped the sigh into an expansion spike.
+      // Sub-step it so ω·h stays ≤ 0.25.
+      {
+        const steps = Math.max(1, Math.ceil(dt * 120));
+        const h = dt / steps;
+        for (let k = 0; k < steps; k += 1) {
+          [st.squeeze.x, st.squeeze.v] = springStep(
+            st.squeeze.x,
+            st.squeeze.v,
+            L.inert ? 0 : squeezeTarget,
+            B.stiffness,
+            B.damping,
+            h,
+          );
+        }
+      }
       if (L.inert) {
         st.dip.x = 0;
         st.dip.v = 0;
+        st.squeeze.x = 0;
+        st.squeeze.v = 0;
       }
       const dipDiv = tabletRefs.dip.current;
-      if (dipDiv) dipDiv.style.transform = `translateY(${st.dip.x.toFixed(2)}px)`;
+      if (dipDiv) {
+        // One writer, one transform: dip (translateY) + breath (centered
+        // scale, narrower-dominant). Scale, never layout — width would
+        // reflow the monospace wrap, height would clip the standing
+        // outgoing text.
+        const sx = 1 - B.ampX * st.squeeze.x;
+        const sy = 1 - B.ampY * st.squeeze.x;
+        dipDiv.style.transform = `translateY(${st.dip.x.toFixed(2)}px) scale(${sx.toFixed(4)}, ${sy.toFixed(4)})`;
+      }
 
-      // The glow breathes; a decode adds a swell that decays.
+      // The glow breathes; a fire adds a swell that decays.
       st.swell = Math.max(0, st.swell - TABLET.glow.swellDecayPerSec * dt);
       const breathe = L.inert
         ? 0
@@ -542,7 +790,6 @@ export function AsAboveApp() {
       // last light to that ring before going dark. One kernel per front
       // drives BOTH answers a ring gives as it is crossed: the kick (radial
       // heave) and the wash (flush toward the body's light).
-      const W = TABLET.waves;
       const radii = wavesRefs.radii.current;
       const kicks = st.kicks;
       const wash = st.wash;
@@ -588,18 +835,12 @@ export function AsAboveApp() {
       }
 
       // The sea: a phase-lagged crest travels the rings outward forever; the
-      // decode's swell raises the whole field's amplitude for a breath; a
+      // fire's swell raises the whole field's amplitude for a breath; a
       // passing ripple front heaves each ring — and lights it — in turn; and
-      // the gulp pulls the WHOLE sea inward for one breath at every fire
-      // (constant-u, like the crests, so the swallow reads evenly).
-      const G = W.gulp;
-      const gulpP = (now - st.gulpStart) / G.ms;
-      // sin², not sin: a plain half-sine still has velocity when it hits the
-      // end and clamps to 0 — a kink that lands at ~320ms, exactly where the
-      // innermost ring peaks. Squaring it starts and ENDS at zero velocity,
-      // so the swallow releases into the cascade instead of stopping dead.
-      const gulpSin = Math.sin(Math.PI * gulpP);
-      const gulpU = !L.inert && gulpP >= 0 && gulpP < 1 ? -G.ampU * gulpSin * gulpSin : 0;
+      // the gulp (gulpU — computed beside the tablet's squeeze above: one
+      // envelope, sea and stone) pulls the WHOLE sea inward for one breath
+      // at every fire (constant-u, like the crests, so the swallow reads
+      // evenly).
       const crest = W.ampU * (1 + st.swell * W.swellAmpBoost);
       for (let i = 0; i < radii.length; i += 1) {
         const ring = wavesRefs.rings.current[i];
@@ -628,13 +869,13 @@ export function AsAboveApp() {
         }
       }
 
-      // The decode boils toward legibility.
-      writeDecodeFrame(now);
+      // The writing-light advances over the stone.
+      writeEngraveFrame(now);
     };
 
     raf = requestAnimationFrame(step);
     return () => cancelAnimationFrame(raf);
-  }, [booted, writeDecodeFrame, skyRefs.sun, skyRefs.moon, skyRefs.sunHalo, skyRefs.moonHalo, skyRefs.drift, tabletRefs.drift, tabletRefs.dip, tabletRefs.aura, tabletRefs.sheen, wavesRefs.rings, wavesRefs.washes, wavesRefs.radii, lensRefs.rings, lensRefs.washes, raysRef]);
+  }, [booted, writeEngraveFrame, skyRefs.sun, skyRefs.moon, skyRefs.sunHalo, skyRefs.moonHalo, skyRefs.drift, tabletRefs.drift, tabletRefs.dip, tabletRefs.aura, tabletRefs.sheen, wavesRefs.rings, wavesRefs.washes, wavesRefs.radii, lensRefs.rings, lensRefs.washes, raysRef]);
 
   // ── Keyboard: Enter/Space fire from anywhere; S flips the sky ──────────────
   useEffect(() => {
@@ -667,7 +908,7 @@ export function AsAboveApp() {
     };
   }, [fire, toggleMode]);
 
-  // ── ORACLE — AUTO: left alone, the tablet re-decodes on its own ────────────
+  // ── ORACLE — AUTO: left alone, the tablet speaks again on its own ──────────
   const lastActivity = useRef(0);
   useEffect(() => {
     lastActivity.current = Date.now();
