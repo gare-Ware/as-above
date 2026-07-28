@@ -27,7 +27,10 @@
 //             wave amplitude, and every fire launches a ripple FROM THE BODY
 //             (sun or moon): halo + rays FLARE at launch and the front
 //             cascades outward with the waves, kicking each ring in turn as
-//             it crosses — above answers below as one continuous gesture
+//             it crosses, then LANDS on the ring nearest the key — the
+//             light dies fast (a flash that cascades) while a thump and its
+//             after-thump ring the water down to still — above answers
+//             below as one continuous gesture, spent where it lands
 //   sheen   — the specular band on the gem drifts on its own slow period
 //             (the tablet no longer tilts, so the light itself wanders)
 //
@@ -162,13 +165,15 @@ export const TABLET = {
         instead each ring KICKS (radial heave) and WASHES (flushes toward
         the body's light, --pulse) as the front crosses its radius. The
         front does NOT permeate the scene: it glides to rest ON the terminal
-        ring — the ring NEAREST THE KEY, measured at fire — takes the
-        arrival glow there, and extinguishes. Anchored to the key (fixed in
-        the layout), not the tablet, so the journey never changes length
-        with the fact. */
+        ring — the ring NEAREST THE KEY, measured at fire — and LANDS there:
+        the arrival glow lingers as an ember on that ring (the dwell) with a
+        touchdown thump and a candle-rate roil, ringing down to dark instead
+        of vanishing. Anchored to the key (fixed in the layout), not the
+        tablet, so the journey never changes length with the fact. */
     pulse: {
       pool: 3, // simultaneous ripples (mash headroom)
-      speedPerSec: 1.4, // journey to the terminal ring (quadratic ease — glides to rest)
+      speedPerSec: 2.1, // journey to the terminal ring (sine ease — glides to rest;
+      //                   ~480ms: a shockwave that visibly crosses the sea, fast)
       fromScale: 0.04, // a point at the body; the stop radius is measured per fire
       kickAmpU: 20, // radial kick a ring gets as the front crosses it
       kickWidthU: 135, // kernel half-width of that kick, svg units (wider = more
@@ -178,6 +183,25 @@ export const TABLET = {
       flareDecayPerSec: 1.5,
       raysMaxOpacity: 0.8, // the ray bloom behind the body at full flare
       raysDegPerSec: 6, // the rays' slow shimmer rotation while lit
+      /** The dwell — the landing. The energy that crossed the sea doesn't
+          vanish at the terminal ring; it LANDS — but light and water part
+          ways here: the arrival LIGHT dies fast (lightMs — the whole
+          cascade reads as a flash that lands), while the WATER keeps
+          moving: a springy touchdown thump (damped sine — heave, slosh
+          back, a fainter after-thump) rings down with the kick relaxation
+          over the full dwell. A lingering glow ember was tried and cut —
+          the flash is the drama; the movement is the residue. */
+      dwell: {
+        ms: 850, // movement ring-down: kick relaxation + thump, touchdown → still
+        lightMs: 170, // the light's death AFTER geometric arrival…
+        lightLeadMs: 90, // …opening THIS far before it: one ease-out spans the
+        //                  brake and the landing (q-time, which never stalls),
+        //                  so the flash starts dying as the front brakes in and
+        //                  the light never sits still waiting for the thump
+        thumpAmpU: 14, // touchdown heave on the terminal ring
+        thumpHz: 2.2, // damped sine — ~2 lobes inside the dwell (thump, after-thump)
+        thumpDecayPerSec: 3.5,
+      },
     },
   },
 
