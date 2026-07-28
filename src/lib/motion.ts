@@ -37,5 +37,18 @@ export const PRESS = { whileTap: { scale: 0.95 } } as const;
 /** Reduced-motion path: short opacity-only moves. */
 export const REDUCED_FADE_MS = 140;
 
-/** The hint line waits a beat before speaking, and retires after first use. */
-export const HINT_AT_MS = 1600;
+/** THE POSTER's ink — the shared species-eval/HATCH treatment: giant
+    variable type ENTERS THIN AND GROWS on a near-critically-damped spring
+    (ζ≈0.91 — the axis clamps at 900, so real overshoot would flat-line
+    there and read as a stall). Fraunces opens at its axis floor (100,
+    genuinely hairline — HATCH's lesson: starting at the minimum is what
+    makes "thin" read) and lands at full black. The weight settles AFTER
+    the drift/fade — the late channel is the follow-through. */
+export const POSTER_INK_FROM = 100;
+export const POSTER_INK_REST = 900;
+export const POSTER_INK: Transition = { type: 'spring', stiffness: 120, damping: 20 };
+/** The lines' drift into place — calm, no bounce (the poster is paper,
+    not water). */
+export const POSTER_GLIDE: Transition = { type: 'spring', stiffness: 300, damping: 30 };
+/** AS leads, ABOVE follows one breath later (dramatic-stagger register). */
+export const POSTER_LINE_STAGGER_MS = 150;

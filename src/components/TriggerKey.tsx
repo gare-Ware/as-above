@@ -1,7 +1,11 @@
 'use client';
 
-// The TRIGGER — the app's hero control: a wide pill of REAL liquid glass.
-// Deliberately the ONE object that does not wear the world's palette as
+// The TRIGGER — the app's hero control. CURRENT FINISH: 'smoke' — a pill
+// of dark tinted glass in the sky's deepest tone, sitting ON the poster
+// (see keyFinish below for why the clear pill retired; ?key=glass brings
+// it back for comparison). The clear/lens path below remains fully wired:
+// a wide pill of REAL liquid glass,
+// deliberately the ONE object that does not wear the world's palette as
 // paint — instead it holds a pixel-aligned windowed COPY of the wave field
 // (same seed, same geometry, driven by the same engine) and bends it with a
 // true feDisplacementMap lens (lib/lens.ts, the glass-demo technique): the
@@ -50,6 +54,23 @@ export interface LensRefs {
 
 type LensMode = 'pending' | 'flat' | 'bent';
 
+type KeyFinish = 'smoke' | 'glass';
+
+/** The key's finish — the live experiment. 'smoke' (the default) paints
+    the pill in the sky's darkest tone: the poster made the clear pill a
+    liar (the Chromium lens bends a copy of the WAVE FIELD only, so glass
+    over the lettering showed waves without the word) and a ghost (a clear
+    pill dissolves against giant cream letters). Smoked glass keeps the
+    material honest — a dark tinted pane, backdrop-blurred so the word
+    ghosts through it, specular whispers intact. '?key=glass' restores the
+    clear/lens pill for A/B comparison. */
+function keyFinish(): KeyFinish {
+  if (typeof window === 'undefined') return 'smoke';
+  return new URLSearchParams(window.location.search).get('key') === 'glass'
+    ? 'glass'
+    : 'smoke';
+}
+
 /** The emblem: an equilateral triangle, its exact incircle, and the
     triangle inscribed in THAT — the cover's nesting, three strokes. */
 function Emblem() {
@@ -73,6 +94,9 @@ export const TriggerKey = forwardRef<
   const anim = useRef<ReturnType<typeof animate> | null>(null);
   const lens = useRef<Lens | null>(null);
   const [lensMode, setLensMode] = useState<LensMode>('pending');
+  // Client-only component (the app renders after boot), so the param read
+  // is safe at first render — the smoke pill never flashes clear.
+  const [finish] = useState<KeyFinish>(() => keyFinish());
 
   // Same seed, same pure generator, same sea — the copy is identical to
   // the field behind the key, so at rest the seam is invisible.
@@ -82,8 +106,10 @@ export const TriggerKey = forwardRef<
     // Decide before the browser's first paint of this client-only scene.
     // Until then the copy is not mounted, so production's single effect pass
     // cannot expose WebKit to even one raster of the fragile inline SVG.
-    setLensMode(lensSupported() ? 'bent' : 'flat');
-  }, []);
+    // The smoke finish never mounts the copy at all — the pill is a pane,
+    // not a window, so there is nothing to duplicate or bend.
+    setLensMode(finish === 'glass' && lensSupported() ? 'bent' : 'flat');
+  }, [finish]);
 
   useLayoutEffect(() => {
     if (lensMode !== 'bent') return;
@@ -164,6 +190,7 @@ export const TriggerKey = forwardRef<
       type="button"
       className="glass-key"
       data-lens={lensMode}
+      data-finish={finish}
       data-pressed="false"
       aria-label="Trigger — the tablet answers"
       onPointerDown={onPointerDown}

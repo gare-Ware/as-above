@@ -98,6 +98,11 @@ export function Waves({ seed, refs }: { seed: string; refs: WavesRefs }) {
           return (
             <g
               key={i}
+              // Born dark: the engine's ring-birth ramps each ring in as it
+              // grows out of the body (inert paths write 1 on frame one) —
+              // without this the full field flashes for the frames between
+              // React's commit and the engine's first write.
+              opacity={0}
               ref={(el) => {
                 refs.rings.current[i] = el;
               }}

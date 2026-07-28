@@ -1,10 +1,14 @@
 // Smoke suite for the whole devotional loop. Every spec waits on the app's
-// own ready signal ([data-ready="true"] on <main>) — never race the mount.
-// There is no readiness clock in AS ABOVE (every press answers instantly),
-// so no ?fast hook exists or is needed.
+// own signals ([data-ready="true"], then [data-intro="done"] on <main>) —
+// never race the mount OR the intro: input is gated until the key
+// materializes. There is no readiness clock beyond that (every press
+// answers instantly), so no ?fast hook exists or is needed.
 import { expect, test } from '@playwright/test';
 
-const ready = (page) => page.waitForSelector('main[data-ready="true"]', { timeout: 20_000 });
+const ready = async (page) => {
+  await page.waitForSelector('main[data-ready="true"]', { timeout: 20_000 });
+  await page.waitForSelector('main[data-intro="done"]', { timeout: 20_000 });
+};
 
 /** Fire the on-stage TRIGGER via pointer events (its press path). */
 async function pressTrigger(page) {
@@ -16,9 +20,35 @@ async function pressTrigger(page) {
 const settled = (page) =>
   page.waitForSelector('main[data-decode="settled"]', { timeout: 5_000 });
 
+test('the intro walks its beats in order and gates input until the key lands', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.waitForSelector('main[data-ready="true"]', { timeout: 20_000 });
+
+  // The word arrives while input is still the world's: a press mid-poster
+  // must not deal.
+  await page.waitForSelector('main[data-intro="poster"]', { timeout: 10_000 });
+  await page.keyboard.press('Enter');
+  await expect(page.locator('main')).toHaveAttribute('data-decode', 'idle');
+
+  // The stone's birth fire, then the key's landing beat, then the open loop.
+  await page.waitForSelector('main[data-intro="tablet"]', { timeout: 10_000 });
+  await page.waitForSelector('main[data-intro="done"]', { timeout: 10_000 });
+  await expect(page.locator('.poster')).toBeVisible();
+
+  await pressTrigger(page);
+  await settled(page);
+  expect((await page.locator('.fact-claim').textContent())?.trim().length).toBeGreaterThan(0);
+  // The poster is the permanent cover — still standing after the loop runs.
+  await expect(page.locator('.poster')).toBeVisible();
+});
+
 test('WebKit glass fallback never paints the duplicated live SVG', async ({ page }) => {
+  // The clear/lens finish stays fully wired behind ?key=glass — this spec
+  // guards ITS WebKit fallback, so it opts in explicitly.
   await page.setViewportSize({ width: 375, height: 720 });
-  await page.goto('/?lens=flat');
+  await page.goto('/?lens=flat&key=glass');
   await ready(page);
 
   const key = page.getByRole('button', { name: /trigger/i });
@@ -30,6 +60,18 @@ test('WebKit glass fallback never paints the duplicated live SVG', async ({ page
   // The fallback must be correct before the interaction that historically
   // forced WebKit to repaint the corrupt half-tile.
   await expect(key).toHaveAttribute('data-pressed', 'false');
+});
+
+test('the default finish is smoke: a pane, never a window — no field copy', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await ready(page);
+  const key = page.getByRole('button', { name: /trigger/i });
+  await expect(key).toHaveAttribute('data-finish', 'smoke');
+  await expect(key).toHaveAttribute('data-lens', 'flat');
+  await expect(key.locator('.key-scene')).toHaveCount(0);
+  await expect(key.locator('.key-grade')).toHaveCSS('opacity', '0');
 });
 
 test('TRIGGER reveals a fact; repeated presses cycle new ones with zero cooldown', async ({

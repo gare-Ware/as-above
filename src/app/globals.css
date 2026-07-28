@@ -170,6 +170,42 @@ body {
   transition: fill var(--theme-fade) ease;
 }
 
+/* ── THE POSTER — the magazine cover the scene is set on ──
+   Two billboard lines (Poster.tsx) justified to one measure: fullscreen
+   when the viewport allows, smaller and higher as it narrows. Same paint
+   bucket as the waves (z: 0) but later in the DOM, so it covers the field;
+   .stage (z: 1) — sun, stone, key — overlaps IT: the scene sits on the
+   cover, never under it. The width budget's height term keeps the stack
+   (≈ 0.753 × width — derived from Poster.tsx's line metrics; retune them
+   together) inside the viewport: 1 / 0.753 ≈ 1.328. */
+:root {
+  --poster-w: min(96vw, calc((100dvh - 4rem) * 1.328));
+}
+.poster {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: var(--poster-w);
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--poster-w) * 0.035);
+  z-index: 0;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.poster-line svg {
+  display: block;
+  width: 100%;
+  overflow: visible;
+}
+.poster-line text {
+  font-family: var(--font-display), serif;
+  fill: var(--ink);
+  transition: fill var(--theme-fade) ease;
+}
 .stage {
   position: relative;
   z-index: 1; /* above the wave field */
@@ -177,20 +213,42 @@ body {
   height: var(--stage-h);
 }
 
+/* The container materializes at once — the sun is THERE at t0. The intro's
+   drama belongs to the world's birth (rings, poster, the stone's fire),
+   not to the box they live in. */
 @media (prefers-reduced-motion: no-preference) {
   .stage {
-    animation: stage-in 800ms cubic-bezier(0.2, 0, 0, 1) both;
+    animation: stage-in 260ms ease-out both;
   }
 }
 @keyframes stage-in {
   from {
     opacity: 0;
-    transform: translateY(10px);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
   }
+}
+
+/* ── The intro's doors (data-intro on <main>) — each element joins at its
+   beat. CSS owns these attribute-flip reveals; the tablet's condense is
+   Motion's one-shot (AsAboveApp.birthTablet), so its wrapper only holds
+   the closed state here. */
+.tablet-birth {
+  opacity: 0; /* Motion opens it (every path, reduced included) */
+}
+main:not([data-intro='key']):not([data-intro='done']) .key-zone {
+  opacity: 0;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: no-preference) {
+  main:not([data-intro='key']):not([data-intro='done']) .key-zone {
+    transform: translateY(9px);
+  }
+}
+main:not([data-intro='done']) .console-chip {
+  opacity: 0;
+  pointer-events: none;
 }
 
 /* ── The sky — a filled disc now; the waves are its voice ── */
@@ -625,6 +683,10 @@ main[data-decode='decoding'] .tablet-text {
   z-index: 6;
   display: flex;
   justify-content: center;
+  /* The intro door: the key materializes on the ripple's touchdown thump
+     (data-intro flips to 'key' at that beat) — rising the last few px as
+     the light dies on its ring. */
+  transition: opacity 460ms cubic-bezier(0.2, 0, 0, 1), transform 460ms cubic-bezier(0.2, 0, 0, 1);
 }
 .glass-key {
   position: relative;
@@ -645,6 +707,24 @@ main[data-decode='decoding'] .tablet-text {
     inset 0 -8px 14px -10px rgba(8, 18, 36, 0.3);
   transition: box-shadow 180ms ease;
 }
+/* SMOKE — the current finish (the poster experiment): the pill wears the
+   sky's DARKEST tone, a shade past the outermost ring so it separates
+   from the field it floats over, slightly translucent and backdrop-
+   blurred so the word ghosts through the pane. The specular whispers
+   (rim/gloss/glint/caps) stay — smoked glass is still glass. Element-
+   scoped color-mix (the custom-property gotcha) and a theme-fade glide
+   like every token consumer. */
+.glass-key[data-finish='smoke'] {
+  background: color-mix(
+    in oklab,
+    color-mix(in oklab, var(--wave-edge) 72%, black) 88%,
+    transparent
+  );
+  backdrop-filter: blur(14px) saturate(1.35);
+  -webkit-backdrop-filter: blur(14px) saturate(1.35);
+  transition: background-color var(--theme-fade) ease, box-shadow 180ms ease;
+}
+
 /* The bent scene: the field copy, clipped to the pill, refracted by the
    lens (its CSS filter chain is written by lib/lens.ts). */
 .key-scene {
@@ -676,6 +756,12 @@ main[data-decode='decoding'] .tablet-text {
 .glass-key[data-lens='pending'] .key-grade,
 .glass-key[data-lens='flat'] .key-grade {
   opacity: 1;
+}
+/* Smoke needs no grade: the veil substitutes the lens's brightness grade
+   on the CLEAR pill — on the dark pane it only milks the black. (After
+   the rule above: equal specificity, order decides.) */
+.glass-key[data-finish='smoke'] .key-grade {
+  opacity: 0;
 }
 .key-scene-svg {
   position: absolute;
@@ -808,7 +894,7 @@ main[data-decode='decoding'] .tablet-text {
     inset 0 1px 0 color-mix(in oklab, var(--glass-edge) 70%, transparent),
     0 4px 14px -6px rgba(0, 0, 0, 0.4);
   cursor: pointer;
-  transition: color 200ms ease;
+  transition: color 200ms ease, opacity 420ms ease;
 }
 .console-chip:hover {
   color: var(--ink);

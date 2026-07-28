@@ -17,6 +17,9 @@
 // owns every animated attribute via these refs. Channel discipline — one
 // writer per element:
 //   .tablet-drift  — engine: levitation (pure vertical bob — always plumb)
+//    .tablet-birth — Motion (one-shot): the intro's condense — opacity +
+//                    centered scale, written once at the birth fire's
+//                    release, inert forever after
 //     .tablet-dip  — engine: fire suspension dip (spring) + the breath's
 //                    gulp squeeze (centered narrower-dominant scale)
 //       .tablet-aura  — engine: glow breathing + swell (opacity)
@@ -33,6 +36,8 @@ import { seededRng } from '@/lib/rand';
 
 export interface TabletRefs {
   drift: RefObject<HTMLDivElement | null>;
+  /** The intro's condense wrapper — Motion writes it exactly once. */
+  birth: RefObject<HTMLDivElement | null>;
   dip: RefObject<HTMLDivElement | null>;
   aura: RefObject<HTMLDivElement | null>;
   screen: RefObject<HTMLDivElement | null>;
@@ -132,7 +137,8 @@ export function Tablet({
   return (
     <div className="tablet-root">
       <div ref={refs.drift} className="tablet-drift">
-        <div ref={refs.dip} className="tablet-dip">
+        <div ref={refs.birth} className="tablet-birth">
+          <div ref={refs.dip} className="tablet-dip">
           <div ref={refs.aura} className="tablet-aura" aria-hidden="true" />
           <div
             className="tablet-slab"
@@ -212,6 +218,7 @@ export function Tablet({
                 </p>
               </div>
             </div>
+          </div>
           </div>
         </div>
       </div>

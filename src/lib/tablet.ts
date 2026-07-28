@@ -223,6 +223,43 @@ export const TABLET = {
 
   /** ORACLE — AUTO: the tablet speaks again on its own after this much idle. */
   oracleIdleMs: 45_000,
+
+  /** THE INTRO — the world is born once per load, in the fire's own grammar
+      run in reverse order of rank: first the WORLD (rings grow out of the
+      sun, the birth flare blooming at t0), then the WORD (the poster inks
+      in, thin→black), then the STONE (a real fire: gulp → release → the
+      tablet condenses as the ripple crosses its station), and the ripple
+      LANDS at the key's ring — where the key materializes on the thump:
+      the answer lands where the hand will be, and input goes live there.
+      All beats are virtual-clock / slowMs'd, so SLOWMO stretches the whole
+      opening. */
+  intro: {
+    /** The rings' birth — engine-driven, pure math (ringBirthPose). */
+    birth: {
+      fromU: 55, // collapsed radius: tucked under the disc + halo
+      ringMs: 950, // one ring's growth, cubic ease-out (fluid, no overshoot)
+      ringStaggerMs: 110, // inner→outer — the sea radiates into being
+      fadeMs: 220, // per-ring opacity ramp as it emerges
+    },
+    /** The poster begins while the outer rings are still arriving —
+        overlap, not sequence (the same law as the gulp's launchFrac). */
+    posterAtMs: 1000,
+    /** The stone's birth fire: firePulse() runs the full gulp → release →
+        ripple grammar; the tablet's condense launches at the release. */
+    tabletAtMs: 2400,
+    /** The key materializes on the ripple's touchdown thump:
+        tabletAtMs + gulp.ms·launchFrac + 1000/pulse.speedPerSec ≈ the
+        front's landing. Re-derive if the gulp or pulse speed is retuned —
+        this beat only reads if the key is born AS the light dies on its
+        ring. */
+    keyAtMs: 3100,
+    doneAtMs: 3600,
+    /** The condense: scale keyframes under the GROW spring (the slab's one
+        growth voice), opacity leading slightly — born as light, then mass. */
+    tabletBirth: { fromScale: 0.86, opacityMs: 380 },
+    /** Reduced motion / STILL: the intro is one quiet crossfade. */
+    reducedDoneMs: 450,
+  },
 } as const;
 
 // ── Pure helpers ─────────────────────────────────────────────────────────────
@@ -238,6 +275,33 @@ export function springStep(
 ): [number, number] {
   const nextV = v + (-stiffness * (x - target) - damping * v) * dt;
   return [x + nextV * dt, nextV];
+}
+
+/** How long the whole ring birth takes (the last ring's finish). */
+export function ringBirthTotalMs(): number {
+  const I = TABLET.intro.birth;
+  return (TABLET.waves.ringCount - 1) * I.ringStaggerMs + I.ringMs;
+}
+
+/**
+ * The world's birth — ring i's pose at t ms since the intro opened: a radius
+ * multiplier (collapsed under the body → 1 at rest) and the ring's opacity
+ * ramp. Cubic ease-out, no overshoot: the sea is AMBIENT-ranked even while
+ * being born — the drama lives in the t0 flare, not in the water lurching.
+ * Pure and clamped: t past the end (or a huge t) is exactly the resting
+ * pose, so the engine can call it unguarded.
+ */
+export function ringBirthPose(tMs: number, i: number, R: number): { scale: number; opacity: number } {
+  const I = TABLET.intro.birth;
+  const c = (v: number) => Math.max(0, Math.min(1, v));
+  const age = tMs - i * I.ringStaggerMs;
+  const p = c(age / I.ringMs);
+  const e = 1 - (1 - p) ** 3;
+  const from = Math.min(I.fromU, R); // never a scale-UP birth, whatever the radii
+  return {
+    scale: (from + (R - from) * e) / R,
+    opacity: c(age / I.fadeMs),
+  };
 }
 
 /** The levitation pose at time t (ms since engine birth) — plumb, bob only. */

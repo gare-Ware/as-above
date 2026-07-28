@@ -5,8 +5,11 @@ AS ABOVE — a motion-saturated single-scene web app: a rounded emerald slab
 floats before the sun or moon, whose color radiates across the whole
 viewport as a field of traveling waves; a liquid-glass key (the app's hero
 control) magically re-engraves the tablet with verified conspiracy
-lore about whatever is above. Human-facing overview and controls live in
-`README.md`.
+lore about whatever is above. The whole scene is set on THE POSTER — a
+permanent fullscreen "AS / ABOVE" billboard in the display voice, magazine-
+cover style: sun and stone overlap the word, never the reverse. Every load
+opens with THE INTRO (world → word → stone → key). Human-facing overview
+and controls live in `README.md`.
 
 ## Commands
 - Use Node 20+ and npm 9+ (`.nvmrc` pins Node 20; npm scripts preflight —
@@ -14,12 +17,15 @@ lore about whatever is above. Human-facing overview and controls live in
 - `npm run dev` — dev server (http://localhost:3000)
 - `npm run build` — production build (type-checks) · `npm run start` — serve it
 - `npm run lint` — ESLint · `npm run typecheck` — `tsc --noEmit`
-- `npm run test` — Vitest (corpus integrity, picker law, engrave math, oracle state)
-- `npm run test:e2e` — Playwright smoke on port 3111 (trigger loop, drawer +
-  sky swap, 375px overflow, keyboard-only path, STILL, reduced motion)
+- `npm run test` — Vitest (corpus integrity, picker law, engrave math, oracle
+  state, ring-birth math)
+- `npm run test:e2e` — Playwright smoke on port 3111 (intro beats + input
+  gating, trigger loop, drawer + sky swap, 375px overflow, keyboard-only
+  path, STILL, reduced motion)
 - Verifying motion: `node scripts/peek.mjs [outdir]` (idle/engrave/mash/swap/
   reversal/drawer beats), `node scripts/peek-engrave.mjs [outdir]` (a dense
-  frame burst across one full engrave cycle), and
+  frame burst across one full engrave cycle), `node scripts/peek-intro.mjs`
+  (a burst across the whole intro, phone + desktop passes), and
   `node scripts/peek-reduced.mjs` — Playwright frame captures against the
   running dev server. Never sign off choreography from code alone.
 - Slow motion for the eye: bump `SLOWMO` in `src/lib/slowmo.ts` (HMR applies
@@ -88,16 +94,40 @@ continuous liquid motion through everything, all the time. The rules:
   `--cap-out`/`--lit` vars — mask shapes live in CSS) · the four text
   layers (outgoing + incoming, each carved + gold twin; `textContent`
   written per pair, only at fire).
-  Motion (the library) owns exactly two elements: the stage slide (drawer)
-  and the face's FLIP height; CSS owns seeded ambient dressing (motes,
+  Motion (the library) owns exactly four elements: the stage slide (drawer),
+  the face's FLIP height, the poster's ink entrance (variants, one-shot),
+  and `.tablet-birth` (the intro's condense — imperative `animate()`, written
+  once, inert forever after); CSS owns seeded ambient dressing (motes,
   stars, mist, glyph flutter, gem inclusions, moon fog veils), gated on
-  BOTH `[data-motion='live']` and `prefers-reduced-motion`.
+  BOTH `[data-motion='live']` and `prefers-reduced-motion` — and the intro's
+  DOORS (key-zone + console-chip reveals: attribute-flip transitions on
+  `data-intro`).
 - **`TABLET` config** (`src/lib/tablet.ts`) holds every tunable — float,
   dip, glow, swap, halos, waves (ring count/radii/wobble/travel + the
   ripple: speed/scales/kick/flare/rays), sheen, engrave sweep timings,
-  oracle idle — plus `TABLET.alive = false`, the one-line kill-switch (facts
-  still deal; motion stops). The console's MOTION chip ANDs with it at
-  runtime.
+  oracle idle, intro beats — plus `TABLET.alive = false`, the one-line
+  kill-switch (facts still deal; motion stops). The console's MOTION chip
+  ANDs with it at runtime.
+- **The intro** (once per load; all beats slowMs'd/virtual-clock so SLOWMO
+  stretches the opening): the sun is there at first paint (fast 260ms
+  stage fade) with `flare = 1` — the world's first breath is the birth
+  flash — while the RINGS GROW OUT OF THE BODY (`ringBirthPose` in
+  tablet.ts: pure, clamped, unit-tested — cubic ease-out from `fromU` under
+  the disc to rest, inner→outer stagger, per-ring opacity ramp; the engine
+  multiplies it into the crest scale and writes ring-group opacity ONLY
+  during the birth, only to the real field — the lens copy never sees it,
+  the key isn't on stage yet; `Waves.tsx` mounts rings at opacity 0 so
+  nothing flashes before the first engine frame). At `posterAtMs` the
+  POSTER inks in (overlap, not sequence — the outer rings are still
+  arriving). At `tabletAtMs` the stone's birth is a REAL FIRE: `firePulse()`
+  runs gulp → release → ripple, and `.tablet-birth` condenses at the
+  release (opacity leads ~380ms, the GROW spring brings the mass, a
+  half-strength dip kick lands the weight — explicit from→to keyframes, per
+  the key's flash gotcha). `keyAtMs` ≈ the front's touchdown on the
+  terminal ring — the key-zone door opens ON the thump (re-derive if gulp
+  or pulse speed retunes) and INPUT GOES LIVE (`fire`/`toggleMode` no-op
+  while `data-intro` is pre-'key'; the hint clock starts at 'done').
+  Reduced/STILL: one quiet crossfade, `done` at `reducedDoneMs`.
 - **The ripple** originates at the body: `firePulse()` claims a pool slot,
   measures the TERMINAL ring (the ring radius NEAREST `.key-zone`'s center,
   mapped into wave-svg units once per fire — the key is fixed in the
@@ -205,7 +235,9 @@ continuous liquid motion through everything, all the time. The rules:
   (global handler defers to focused interactive elements), S flips the sky,
   Esc closes.
 - **data-\* signals on `<main>`** — the e2e/capture handover (never race the
-  mount): `data-ready`, `data-mode`, `data-decode` (idle/decoding/settled),
+  mount OR the intro): `data-ready`, `data-intro`
+  (waves/poster/tablet/key/done — input is gated until 'key'; specs and
+  peeks wait for 'done'), `data-mode`, `data-decode` (idle/decoding/settled),
   `data-console`, `data-motion`. `settled` is raised only once the words are
   actually on the glass — including the reduced-motion crossfade path.
 - **Reduced motion / STILL**: `inert = reduced || !motionLive || !alive` —
@@ -226,13 +258,24 @@ continuous liquid motion through everything, all the time. The rules:
   major elements, NO outlines/surface doodles on the bodies: the sun is a
   flat disc + white-hot core gradient; the moon a bare pearl + limb shading
   + fog veils. The console is themed liquid glass (`--glass-*`); the
-  TRIGGER key is the HERO — deliberately UNTHEMED, and REAL liquid glass:
+  TRIGGER key is the HERO. Its CURRENT FINISH is **SMOKE**
+  (`data-finish='smoke'`, the default): a pill of dark tinted glass in the
+  sky's deepest tone (element-scoped nested color-mix: wave-edge pulled
+  28% toward black, 88% opaque, backdrop-blurred so the poster's word
+  ghosts through the pane; theme-fade glide; the flat-path `.key-grade`
+  veil is suppressed — it only milks the black). WHY: the poster made the
+  clear pill a liar (the lens bends a copy of the WAVE FIELD only — glass
+  over the lettering showed waves without the word) and a ghost (clear
+  dissolves on giant cream letters). The specular whispers stay — smoked
+  glass is still glass. `?key=glass` restores the previous finish for
+  comparison; everything below describes that still-fully-wired clear/lens
+  path: deliberately UNTHEMED, and REAL liquid glass:
   a wide pill whose enhanced path samples no backdrop at all. It holds a
   pixel-aligned windowed COPY of the wave field (`buildWaveRings(seed)` —
   same seed,
   same geometry; the engine dual-writes every crest scale and ripple
   transform to both trees; `syncLensWindow` aims its viewBox, re-aimed
-  after the stage entrance and on resize) and BENDS it with a true
+  after the intro's key door lands and on resize) and BENDS it with a true
   feDisplacementMap lens (`src/lib/lens.ts`, the glass-demo technique:
   rounded-rect SDF map on canvas, quadrant-mirrored; sRGB
   color-interpolation or 128 isn't neutral; fresh filter id per update or
@@ -262,16 +305,43 @@ continuous liquid motion through everything, all the time. The rules:
   pastel-psychedelic — bright, saturated-but-soft, pop without neon (sun
   rides gold→peach→rose→violet; moon pearl→periwinkle→indigo), never
   earthy-muted.
+- **The poster** (`Poster.tsx` + `.poster` CSS): "AS" / "ABOVE" as per-line
+  SVGs justified to one measure with `textLength` (species-eval's billboard
+  technique — fluid scaling off `--poster-w`, no clamp() font sizes;
+  fontSize per line is chosen so the natural run ≈ the 1000u measure and
+  textLength only corrects). `--poster-w`'s height term encodes the stack
+  ratio (≈ 0.753 × width — derived from Poster.tsx line metrics; retune
+  together). CENTERED at every size, full-bleed-tight (the sun hangs
+  BETWEEN the A and S — keep that alignment when retuning sizes); on
+  phones the tablet covers most of the word at idle — that crop is the
+  composition, not a bug (a narrow-screen "smaller and higher" masthead
+  was tried and retracted by Gary). Fill is `--ink` at full
+  presence, gliding on the theme fade like every token consumer. It STAYS
+  LOUD permanently — a deliberate register call (Gary's), ranked as
+  BACKDROP: it never moves after its entrance, so it outranks nothing.
 - Two voices: **Cutive Mono** is the tablet voice (tablet text, console
   labels, hints — typewriter-serif that engraves; monospace keeps the
-  engrave's two text layers wrapping identically). **Cinzel** is the
-  display voice (wordmark only). Swap faces in `layout.tsx` only
-  (`--font-terminal` / `--font-display`).
+  engrave's two text layers wrapping identically). **Fraunces** (variable,
+  wght 100–900 + opsz) is the display voice — the poster only. Its ink
+  entrance (thin→black on a ζ≈0.91 spring, weight settling AFTER the
+  drift — the late channel is the follow-through) is the shared
+  species-eval/HATCH treatment; tokens live in `lib/motion.ts`
+  (`POSTER_INK*`). (v3's Cinzel wordmark never rendered; the poster
+  replaced it.) Swap faces in `layout.tsx` only (`--font-terminal` /
+  `--font-display`).
 - **`--stage-h`/`--stage-w`/`--wave-size` (globals.css) are the composition
   knobs**: body, tablet, dunes, key, and overlays derive from stage
   fractions, never raw viewport %.
 
 ## Gotchas
+- The embedded preview/browser pane HIDES between interactions — a hidden
+  page suspends rAF entirely, so the engine's virtual clock (and Motion's
+  rAF-driven springs) FREEZE while beat timers would run on: pane
+  screenshots of choreography show a torn, single-stepped world. Judge
+  motion ONLY via the Playwright peek scripts (they schedule real frames).
+  Relatedly, the intro HOLDS until first `visibilitychange → visible`
+  (background-tab loads must not spend the opening unseen), and the engine
+  self-repairs ring opacity if the ring nodes remount after the birth.
 - Interleaving `next build` and `next dev` on one `.next` corrupts
   `next/font` hashes (fonts silently fall back to system). Fix:
   `rm -rf .next`. Two dev servers on one `.next` can do the same.
@@ -304,13 +374,14 @@ continuous liquid motion through everything, all the time. The rules:
 
 ## Layout
 - `src/data/` — `facts.ts` (the verified corpus) + `integrity.test.ts`
-- `src/lib/` — `tablet` (TABLET config + spring/float/swap math) · `engrave`
-  (pure sweep math) · `picker` (shuffle bag) · `state` (oracle reducers) ·
-  `rand` (xmur3/mulberry32) · `motion` (Motion-side vocabulary) · `slowmo`
-  (the dev slow-motion dial)
-- `src/components/` — `AsAboveApp` (orchestrator + THE engine) · `Waves` ·
-  `Sky` · `Tablet` · `Dust` · `TriggerKey` · `Console` · `Dunes` (kept but
-  currently unmounted — the earth may return)
-- `scripts/` — `peek.mjs` · `peek-engrave.mjs` · `peek-reduced.mjs`
-  (frame-capture verification)
+- `src/lib/` — `tablet` (TABLET config + spring/float/swap/ring-birth math)
+  · `engrave` (pure sweep math) · `picker` (shuffle bag) · `state` (oracle
+  reducers) · `rand` (xmur3/mulberry32) · `motion` (Motion-side vocabulary,
+  poster ink included) · `slowmo` (the dev slow-motion dial)
+- `src/components/` — `AsAboveApp` (orchestrator + THE engine + the intro) ·
+  `Waves` · `Poster` (the billboard) · `Sky` · `Tablet` · `Dust` ·
+  `TriggerKey` · `Console` · `Dunes` (kept but currently unmounted — the
+  earth may return)
+- `scripts/` — `peek.mjs` · `peek-engrave.mjs` · `peek-intro.mjs` ·
+  `peek-reduced.mjs` (frame-capture verification)
 - `tests/e2e/` — `as-above.spec.mjs`
