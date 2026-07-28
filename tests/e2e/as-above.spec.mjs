@@ -62,13 +62,13 @@ test('WebKit glass fallback never paints the duplicated live SVG', async ({ page
   await expect(key).toHaveAttribute('data-pressed', 'false');
 });
 
-test('the default finish is smoke: a pane, never a window — no field copy', async ({
+test('the default finish is frost: a pane, never a window — no field copy', async ({
   page,
 }) => {
   await page.goto('/');
   await ready(page);
   const key = page.getByRole('button', { name: /trigger/i });
-  await expect(key).toHaveAttribute('data-finish', 'smoke');
+  await expect(key).toHaveAttribute('data-finish', 'frost');
   await expect(key).toHaveAttribute('data-lens', 'flat');
   await expect(key.locator('.key-scene')).toHaveCount(0);
   await expect(key.locator('.key-grade')).toHaveCSS('opacity', '0');

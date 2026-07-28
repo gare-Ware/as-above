@@ -707,13 +707,28 @@ main[data-decode='decoding'] .tablet-text {
     inset 0 -8px 14px -10px rgba(8, 18, 36, 0.3);
   transition: box-shadow 180ms ease;
 }
-/* SMOKE — the current finish (the poster experiment): the pill wears the
-   sky's DARKEST tone, a shade past the outermost ring so it separates
-   from the field it floats over, slightly translucent and backdrop-
-   blurred so the word ghosts through the pane. The specular whispers
-   (rim/gloss/glint/caps) stay — smoked glass is still glass. Element-
-   scoped color-mix (the custom-property gotcha) and a theme-fade glide
-   like every token consumer. */
+/* FROST — this branch's finish: the console's own themed liquid glass
+   (--glass-tint body, --glass-edge inset hairline, backdrop blur — the
+   exact material the chips wore), promoted to the trigger. The word
+   ghosts through a LIGHT pane here; the specular whispers stay. */
+.glass-key[data-finish='frost'] {
+  background: var(--glass-tint);
+  backdrop-filter: blur(12px) saturate(1.5);
+  -webkit-backdrop-filter: blur(12px) saturate(1.5);
+  box-shadow:
+    inset 0 1px 0 color-mix(in oklab, var(--glass-edge) 70%, transparent),
+    0 22px 44px -14px rgba(0, 0, 0, 0.4),
+    0 4px 14px rgba(0, 0, 0, 0.18);
+  transition: background-color var(--theme-fade) ease, box-shadow 180ms ease;
+}
+
+/* SMOKE — the poster-intro branch's finish (?key=smoke here): the pill
+   wears the sky's DARKEST tone, a shade past the outermost ring so it
+   separates from the field it floats over, slightly translucent and
+   backdrop-blurred so the word ghosts through the pane. The specular
+   whispers (rim/gloss/glint/caps) stay — smoked glass is still glass.
+   Element-scoped color-mix (the custom-property gotcha) and a theme-fade
+   glide like every token consumer. */
 .glass-key[data-finish='smoke'] {
   background: color-mix(
     in oklab,
@@ -757,10 +772,11 @@ main[data-decode='decoding'] .tablet-text {
 .glass-key[data-lens='flat'] .key-grade {
   opacity: 1;
 }
-/* Smoke needs no grade: the veil substitutes the lens's brightness grade
-   on the CLEAR pill — on the dark pane it only milks the black. (After
-   the rule above: equal specificity, order decides.) */
-.glass-key[data-finish='smoke'] .key-grade {
+/* Smoke and frost need no grade: the veil substitutes the lens's
+   brightness grade on the CLEAR pill — the painted panes bring their own
+   body. (After the rule above: equal specificity, order decides.) */
+.glass-key[data-finish='smoke'] .key-grade,
+.glass-key[data-finish='frost'] .key-grade {
   opacity: 0;
 }
 .key-scene-svg {
@@ -870,50 +886,34 @@ main[data-decode='decoding'] .tablet-text {
   }
 }
 
-/* ── The console — liquid glass, same material as the trigger ── */
+/* ── The console ── The frost material moved UP to the trigger on this
+   branch, so the chip yields the glass entirely: a text-only verb in the
+   corner at EVERY size (the HATCH pattern, previously mobile-only) — one
+   pane on stage, and it's the hero's. Padding stays generous: the touch
+   target is invisible, not gone. */
 .console-chip {
   position: fixed;
-  bottom: max(1rem, env(safe-area-inset-bottom));
-  right: max(1rem, env(safe-area-inset-right));
+  bottom: max(0.35rem, env(safe-area-inset-bottom));
+  right: max(0.8rem, env(safe-area-inset-right));
   z-index: 50;
   display: flex;
   align-items: center;
   gap: 7px;
-  padding: 10px 16px;
+  padding: 12px 4px;
   border: 0;
   border-radius: 999px;
   font-family: var(--font-terminal), monospace;
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.24em;
-  color: color-mix(in oklab, var(--ink) 72%, transparent);
-  background: var(--glass-tint);
-  backdrop-filter: blur(12px) saturate(1.5);
-  -webkit-backdrop-filter: blur(12px) saturate(1.5);
-  box-shadow:
-    inset 0 1px 0 color-mix(in oklab, var(--glass-edge) 70%, transparent),
-    0 4px 14px -6px rgba(0, 0, 0, 0.4);
+  color: color-mix(in oklab, var(--ink) 80%, transparent);
+  background: none;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.35);
   cursor: pointer;
   transition: color 200ms ease, opacity 420ms ease;
 }
 .console-chip:hover {
   color: var(--ink);
-}
-/* Narrow devices: the chip sheds its glass container — a text-only verb in
-   the corner (the HATCH pattern), tucked low and right so it never crowds
-   the key. Padding stays generous: the touch target is invisible, not gone. */
-@media (max-width: 640px) {
-  .console-chip {
-    background: none;
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-    box-shadow: none;
-    padding: 12px 4px;
-    bottom: max(0.35rem, env(safe-area-inset-bottom));
-    right: max(0.8rem, env(safe-area-inset-right));
-    color: color-mix(in oklab, var(--ink) 80%, transparent);
-    text-shadow: 0 1px 6px rgba(0, 0, 0, 0.35);
-  }
 }
 .console-panel {
   position: fixed;

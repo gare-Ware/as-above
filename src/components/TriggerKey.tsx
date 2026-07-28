@@ -1,9 +1,9 @@
 'use client';
 
-// The TRIGGER — the app's hero control. CURRENT FINISH: 'smoke' — a pill
-// of dark tinted glass in the sky's deepest tone, sitting ON the poster
-// (see keyFinish below for why the clear pill retired; ?key=glass brings
-// it back for comparison). The clear/lens path below remains fully wired:
+// The TRIGGER — the app's hero control. CURRENT FINISH (this branch):
+// 'frost' — the console's themed liquid glass promoted to the trigger
+// (see keyFinish below for why the clear pill retired; ?key=smoke and
+// ?key=glass switch finishes). The clear/lens path below remains fully wired:
 // a wide pill of REAL liquid glass,
 // deliberately the ONE object that does not wear the world's palette as
 // paint — instead it holds a pixel-aligned windowed COPY of the wave field
@@ -54,21 +54,21 @@ export interface LensRefs {
 
 type LensMode = 'pending' | 'flat' | 'bent';
 
-type KeyFinish = 'smoke' | 'glass';
+type KeyFinish = 'frost' | 'smoke' | 'glass';
 
-/** The key's finish — the live experiment. 'smoke' (the default) paints
-    the pill in the sky's darkest tone: the poster made the clear pill a
-    liar (the Chromium lens bends a copy of the WAVE FIELD only, so glass
-    over the lettering showed waves without the word) and a ghost (a clear
-    pill dissolves against giant cream letters). Smoked glass keeps the
-    material honest — a dark tinted pane, backdrop-blurred so the word
-    ghosts through it, specular whispers intact. '?key=glass' restores the
-    clear/lens pill for A/B comparison. */
+/** The key's finish — the live experiment; THIS BRANCH defaults to
+    'frost': the console's own themed liquid glass (--glass-tint +
+    backdrop blur, the material the chips wear), promoted to the trigger —
+    the poster's word ghosts through a light frosted pane instead of the
+    smoke branch's dark one. The clear pill retired either way: the
+    Chromium lens bends a copy of the WAVE FIELD only, so glass over the
+    lettering showed waves without the word, and a clear pill dissolves
+    against giant cream letters. '?key=smoke' / '?key=glass' switch
+    finishes for A/B comparison. */
 function keyFinish(): KeyFinish {
-  if (typeof window === 'undefined') return 'smoke';
-  return new URLSearchParams(window.location.search).get('key') === 'glass'
-    ? 'glass'
-    : 'smoke';
+  if (typeof window === 'undefined') return 'frost';
+  const k = new URLSearchParams(window.location.search).get('key');
+  return k === 'glass' || k === 'smoke' ? k : 'frost';
 }
 
 /** The emblem: an equilateral triangle, its exact incircle, and the

@@ -257,19 +257,22 @@ continuous liquid motion through everything, all the time. The rules:
   everything settles back to carved. NO hard edges on
   major elements, NO outlines/surface doodles on the bodies: the sun is a
   flat disc + white-hot core gradient; the moon a bare pearl + limb shading
-  + fog veils. The console is themed liquid glass (`--glass-*`); the
-  TRIGGER key is the HERO. Its CURRENT FINISH is **SMOKE**
-  (`data-finish='smoke'`, the default): a pill of dark tinted glass in the
-  sky's deepest tone (element-scoped nested color-mix: wave-edge pulled
-  28% toward black, 88% opaque, backdrop-blurred so the poster's word
-  ghosts through the pane; theme-fade glide; the flat-path `.key-grade`
-  veil is suppressed — it only milks the black). WHY: the poster made the
-  clear pill a liar (the lens bends a copy of the WAVE FIELD only — glass
-  over the lettering showed waves without the word) and a ghost (clear
-  dissolves on giant cream letters). The specular whispers stay — smoked
-  glass is still glass. `?key=glass` restores the previous finish for
-  comparison; everything below describes that still-fully-wired clear/lens
-  path: deliberately UNTHEMED, and REAL liquid glass:
+  + fog veils. The console PANEL is themed liquid glass (`--glass-*`); its
+  chip is a TEXT-ONLY verb at every size on this branch — the frost moved
+  up to the trigger, and one pane on stage should be the hero's. The
+  TRIGGER key is the HERO. Its CURRENT FINISH (this branch) is **FROST**
+  (`data-finish='frost'`, the default): the console's themed liquid glass
+  promoted to the trigger — `--glass-tint` body, `--glass-edge` inset
+  hairline, backdrop blur, theme-fade glide; the flat-path `.key-grade`
+  veil is suppressed (painted panes bring their own body). `?key=smoke`
+  switches to the poster-intro branch's finish (a dark pane in the sky's
+  deepest tone — wave-edge pulled 28% toward black, 88% opaque). WHY no
+  clear pill on either branch: the poster made it a liar (the lens bends a
+  copy of the WAVE FIELD only — glass over the lettering showed waves
+  without the word) and a ghost (clear dissolves on giant cream letters).
+  The specular whispers stay on both panes. `?key=glass` restores the
+  clear finish for comparison; everything below describes that
+  still-fully-wired clear/lens path: deliberately UNTHEMED, and REAL liquid glass:
   a wide pill whose enhanced path samples no backdrop at all. It holds a
   pixel-aligned windowed COPY of the wave field (`buildWaveRings(seed)` —
   same seed,
