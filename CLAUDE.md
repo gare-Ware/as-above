@@ -22,6 +22,11 @@ lore about whatever is above. Human-facing overview and controls live in
   frame burst across one full engrave cycle), and
   `node scripts/peek-reduced.mjs` — Playwright frame captures against the
   running dev server. Never sign off choreography from code alone.
+- Slow motion for the eye: bump `SLOWMO` in `src/lib/slowmo.ts` (HMR applies
+  live; 6 ≈ a ~4s cascade) — one dial stretches the whole fire (rAF engine
+  via a virtual clock, the FLIP via `slow()`, ms beats via `slowMs()`)
+  with spring character preserved. CSS-owned motion (theme glide, decode
+  warm/cool, ambient, drawer) stays realtime. RESET TO 1 before commit.
 
 ## Stack
 - Next.js 15 (App Router) · React 19 · TypeScript · Tailwind v4 · Motion
@@ -50,8 +55,10 @@ continuous liquid motion through everything, all the time. The rules:
   release a ripple is born FROM THE BODY (sun or moon) — halo + ray bloom
   FLARE at that birth, not at the press — cascading outward with the waves
   only as far as the TERMINAL ring (the ring NEAREST THE KEY, measured per
-  fire), kicking and washing each ring it crosses, handing its arrival glow
-  to the terminal ring and extinguishing, while the tablet dips, its
+  fire), kicking and washing each ring it crosses, and LANDING on the
+  terminal ring — the light dies fast there (a flash that cascades and
+  lands) while the water keeps moving: a springy touchdown thump and its
+  after-thump ringing down to still — while the tablet dips, its
   engraving lights, and its FLIP growth launches at that same release —
   above answers below, and the answer lands where the hand is.
 - **Interruptible by construction:** interactive motion is springs (retarget
@@ -97,13 +104,30 @@ continuous liquid motion through everything, all the time. The rules:
   layout, so the journey is constant; anchoring to the tablet made it jump
   with each fact's height), and starts the gulp clock; the pulse waits out `gulp.ms × launchFrac`, then `flare = 1` fires
   at BIRTH (halo boost + `.sky-rays` bloom decay from there). The front
-  itself is UNSEEN math on a quadratic ease from the body to REST on the
+  itself is UNSEEN math on a sine ease from the body to REST on the
   terminal ring: one kernel per frame accumulates each ring's KICK (radial
   heave) and WASH (opacity of a `--pulse`-filled twin path riding in the
   ring's group) as the front crosses its radius, inner to outer, with
-  energy `(1−0.35q)(1−q⁵)` so the terminal ring takes the arrival glow and
-  the light extinguishes with no pop — the shock is the sea lighting up,
-  never a shape drawn over it. Wash twins own fill in CSS (theme glide);
+  flight energy `1−0.35q` — front-loaded, the body SENDS — and at q=1 the
+  kernel PARKS on the terminal ring for the DWELL (`pulse.dwell`), where
+  light and water part ways: the LIGHT dies on ONE ease-out clock that
+  OPENS `lightLeadMs` before geometric arrival (q-time, which never
+  stalls — keyed to q=1 the sine glide parked the glow ~90ms and it read
+  as waiting for the thump) and runs `lightMs` past it, its kernel WIDTH
+  collapsing to the terminal ring on that same clock — neighbors
+  extinguish in sequence and the shockwave dims WHILE it lands (a
+  fixed-width fade froze the lit band ~100ms then dimmed it in sync —
+  read as "jumps to gone"; a lingering glow ember was also tried and
+  cut), while the
+  MOVEMENT rings down over the full `dwell.ms` (~850ms) — kick relaxation
+  plus a damped-sine touchdown THUMP (heave, slosh back, fainter
+  after-thump) on the kick channel. A fire's energy is spent where it
+  lands, never switched off (a `(1−q⁵)` extinguish-at-arrival was tried:
+  the cascade died the frame it landed and read as anticlimax) — the
+  shock is the sea lighting up,
+  never a shape drawn over it. A slot is idle only once q ≥ 1 AND its
+  dwell is spent (d ≥ 1) — a mash that outruns the pool steals slot 0,
+  cutting its ember (same rule as before, just ~850ms stickier). Wash twins own fill in CSS (theme glide);
   the engine writes opacity only, and only on real change. The gulp is a
   constant-u inward half-sine on every ring, applied in the crest sum.
 - **The wave field** (`src/components/Waves.tsx`): 9 seeded wobble-edged
@@ -282,7 +306,8 @@ continuous liquid motion through everything, all the time. The rules:
 - `src/data/` — `facts.ts` (the verified corpus) + `integrity.test.ts`
 - `src/lib/` — `tablet` (TABLET config + spring/float/swap math) · `engrave`
   (pure sweep math) · `picker` (shuffle bag) · `state` (oracle reducers) ·
-  `rand` (xmur3/mulberry32) · `motion` (Motion-side vocabulary)
+  `rand` (xmur3/mulberry32) · `motion` (Motion-side vocabulary) · `slowmo`
+  (the dev slow-motion dial)
 - `src/components/` — `AsAboveApp` (orchestrator + THE engine) · `Waves` ·
   `Sky` · `Tablet` · `Dust` · `TriggerKey` · `Console` · `Dunes` (kept but
   currently unmounted — the earth may return)

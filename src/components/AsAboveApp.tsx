@@ -22,6 +22,7 @@ import {
   trigger as dealFact,
   type OracleState,
 } from '@/lib/state';
+import { SLOWMO, slow, slowMs } from '@/lib/slowmo';
 import { TABLET, floatPose, springStep, swapPose } from '@/lib/tablet';
 import { Console } from './Console';
 import { Dust } from './Dust';
@@ -34,18 +35,28 @@ type DecodePhase = 'idle' | 'decoding' | 'settled';
 
 /** One ripple in flight: born at the body's center once its wait (the gulp
     overlap) runs out, gliding to rest on stopU — the terminal ring, measured
-    at fire. q ≥ 1 with no wait = idle slot. */
+    at fire — then DWELLING there (d: 0→1, the landing ember ringing down).
+    q ≥ 1 AND d ≥ 1 with no wait = idle slot. */
 interface Pulse {
   q: number;
   /** ms until birth — the ripple waits out most of the gulp. */
   wait: number;
   /** The terminal radius: the first ring past the tablet's bottom edge. */
   stopU: number;
+  /** Dwell progress 0→1 once the front has landed (q = 1): the touchdown
+      thump and the ember's ring-down live here. */
+  d: number;
 }
 
 interface EngineState {
   t0: number;
   last: number;
+  /** The VIRTUAL clock (ms) — real time ÷ SLOWMO, accumulated per frame.
+      Every time anchor in the fire (gulpStart, engrave.start) is minted
+      from this, and the loop reads it wherever it once read `now`, so the
+      slow-mo dial stretches the whole choreography coherently. At
+      SLOWMO = 1 it tracks performance.now() exactly. */
+  vnow: number;
   swap: { x: number; v: number }; // 0=sun … 1=moon
   dip: { x: number; v: number };
   /** The stone's inhale (0=rest … 1=full gulp): a spring chasing the sea's
@@ -85,7 +96,7 @@ interface EngineState {
   idleEpoch: number;
 }
 
-const idlePulse = (): Pulse => ({ q: 1, wait: 0, stopU: 0 });
+const idlePulse = (): Pulse => ({ q: 1, wait: 0, stopU: 0, d: 1 });
 
 const TAU = Math.PI * 2;
 const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
@@ -177,6 +188,7 @@ export function AsAboveApp() {
     wash: Array.from({ length: TABLET.waves.ringCount }, () => 0),
     washPrev: Array.from({ length: TABLET.waves.ringCount }, () => 0),
     gulpStart: -1e9,
+    vnow: 0,
     engrave: null,
     span: 0,
     pendingShrink: false,
@@ -199,7 +211,7 @@ export function AsAboveApp() {
   const firePulse = useCallback(() => {
     const st = eng.current;
     const radii = wavesRefs.radii.current;
-    const slot = st.pulses.findIndex((p) => p.q >= 1 && p.wait <= 0);
+    const slot = st.pulses.findIndex((p) => p.q >= 1 && p.d >= 1 && p.wait <= 0);
     const p = st.pulses[slot >= 0 ? slot : 0];
     // The terminal ring. Fallback: the outermost (odd geometry, no key).
     let stopU = radii[radii.length - 1] ?? TABLET.waves.outerRadius;
@@ -226,9 +238,12 @@ export function AsAboveApp() {
       }
     }
     p.q = 0;
+    p.d = 0;
     p.wait = TABLET.waves.gulp.ms * TABLET.waves.gulp.launchFrac;
     p.stopU = stopU;
-    st.gulpStart = performance.now();
+    // Virtual clock (falls back to real time if a fire somehow precedes the
+    // engine's first frame) — the gulp stretches with the slow-mo dial.
+    st.gulpStart = st.vnow || performance.now();
     // Refs are stable containers; nothing here re-binds.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -345,7 +360,7 @@ export function AsAboveApp() {
       growAnim.current = animate(
         screen,
         { height: `${h1}px` },
-        delayMs > 0 ? { ...GROW, delay: delayMs / 1000 } : GROW,
+        slow(delayMs > 0 ? { ...GROW, delay: delayMs / 1000 } : GROW),
       );
     },
     // Refs are stable containers; nothing here re-binds.
@@ -463,7 +478,7 @@ export function AsAboveApp() {
       let keepOut = false;
       let promoteCapPx: number | null = null;
       if (st.engrave) {
-        const cur = engraveFrame(st.engrave.plan, performance.now() - st.engrave.start);
+        const cur = engraveFrame(st.engrave.plan, st.vnow - st.engrave.start);
         if (cur.phase === 'sweep' && st.engrave.plan.hasOut && cur.writeE < PROMOTE_THRESHOLD) {
           outTexts = st.engrave.plan.outTexts;
           eraseFromPx = cur.eraseE * st.span; // px continuity across the re-plan
@@ -511,12 +526,12 @@ export function AsAboveApp() {
       flipGrow(false, h0Face, true, TABLET.waves.gulp.ms * TABLET.waves.gulp.launchFrac);
       st.engrave = {
         plan: planEngrave(outTexts, texts, eraseFrom, TABLET.engrave),
-        start: performance.now(),
+        start: st.vnow,
       };
       st.swell = 1; // the shared breath: gem glow AND wave amplitude
       st.dip.v += TABLET.dip.kickPxPerSec; // the tablet takes the weight
       if (withPulse) firePulse(); // the sky answers: the ripple is born above
-      writeEngraveFrame(performance.now()); // answer on THIS frame
+      writeEngraveFrame(st.vnow); // answer on THIS frame
       setDecodePhase('decoding');
     },
     // Refs are stable containers; only the callbacks matter.
@@ -547,7 +562,7 @@ export function AsAboveApp() {
       wrap?.style.setProperty('--cap-out', '99999');
       wrap?.style.setProperty('--lit', '0');
       flipGrow(false);
-    }, 500); // after the text layer's fade-out
+    }, slowMs(500)); // after the text layer's fade-out
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [flipGrow, writeTexts, writeOutTexts]);
 
@@ -601,13 +616,17 @@ export function AsAboveApp() {
     const st = eng.current;
     st.t0 = performance.now();
     st.last = st.t0;
+    st.vnow = st.t0; // the virtual clock opens on real time…
     let raf = 0;
 
     const step = (now: number) => {
       raf = requestAnimationFrame(step);
-      const dt = Math.min(0.05, (now - st.last) / 1000);
+      // …and advances at 1/SLOWMO speed: dt is virtual seconds, and every
+      // anchor-based read below uses st.vnow, never `now` — one dial.
+      const dt = Math.min(0.05, (now - st.last) / 1000) / SLOWMO;
       st.last = now;
-      const t = now - st.t0;
+      st.vnow += dt * 1000;
+      const t = st.vnow - st.t0;
       const L = live.current;
 
       // The sky swap — a spring toward the mode, reversible at any frame.
@@ -703,7 +722,7 @@ export function AsAboveApp() {
       // so the swallow releases into the cascade instead of stopping dead.
       const W = TABLET.waves;
       const G = W.gulp;
-      const gulpP = (now - st.gulpStart) / G.ms;
+      const gulpP = (st.vnow - st.gulpStart) / G.ms;
       const gulpSin = Math.sin(Math.PI * gulpP);
       const gulpEnv = gulpP >= 0 && gulpP < 1 ? gulpSin * gulpSin : 0;
       const gulpU = L.inert ? 0 : -G.ampU * gulpEnv;
@@ -786,10 +805,11 @@ export function AsAboveApp() {
 
       // The ripples: pure math, nothing drawn over the field. Each front
       // waits out most of the gulp, is born at the body (halo + rays flare
-      // at THAT frame), glides to rest on its terminal ring, and hands its
-      // last light to that ring before going dark. One kernel per front
-      // drives BOTH answers a ring gives as it is crossed: the kick (radial
-      // heave) and the wash (flush toward the body's light).
+      // at THAT frame), glides to rest on its terminal ring — and LANDS:
+      // the arrival glow doesn't vanish, it dwells there as an ember with a
+      // springy touchdown thump and a candle-rate roil, ringing down to
+      // dark. One kernel per front drives BOTH answers a ring gives: the
+      // kick (radial heave) and the wash (flush toward the body's light).
       const radii = wavesRefs.radii.current;
       const kicks = st.kicks;
       const wash = st.wash;
@@ -797,39 +817,97 @@ export function AsAboveApp() {
       wash.fill(0);
       for (let p = 0; p < st.pulses.length; p += 1) {
         const pulse = st.pulses[p];
-        if (pulse.q >= 1) continue;
+        if (pulse.q >= 1 && pulse.d >= 1) continue;
         if (pulse.wait > 0) {
           // The sea is still swallowing — the ripple is born on the release.
           pulse.wait -= dt * 1000;
           if (pulse.wait > 0) continue;
           st.flare = 1; // birth: halo + rays ignite as the front leaves the body
         }
-        pulse.q = Math.min(1, pulse.q + dt * W.pulse.speedPerSec);
-        const q = pulse.q;
-        // Sine ease-out: the front leaps off the body, then GLIDES to rest on
-        // the terminal ring — arrival, not exit. Sine, NOT quadratic: both
-        // land at zero velocity, but quadratic launches at 2× the average
-        // speed, which crossed the inner rings in ~3 frames each and read as
-        // chop. Sine peaks at 1.57×, so ring crossings are far more evenly
-        // spaced across the journey.
-        const easeOut = Math.sin(q * Math.PI * 0.5);
-        const startU = W.pulse.fromScale * W.innerRadius;
-        const radiusU = startU + (pulse.stopU - startU) * easeOut;
-        // Energy thins a little in flight, then extinguishes as the front
-        // settles (q→1): the terminal ring takes the arrival glow and the
-        // sea goes dark from there — no pop, no residue.
-        const energy = (1 - q * 0.35) * (1 - Math.pow(q, 5));
+        let radiusU: number;
+        let washE: number;
+        let kickE: number;
+        // The dwell glow opens where the flight's thinning ends (1 − 0.35),
+        // so touchdown hands the landing exactly the light the front
+        // arrived with — value-continuous across the q = 1 seam.
+        const ARRIVAL = 0.65;
+        const D = W.pulse.dwell;
+        // ONE light clock spans the brake and the landing: it opens
+        // lightLeadMs before geometric arrival and runs lightMs past it.
+        // The clock is q-time — q advances at a constant rate even while
+        // the eased POSITION glides to rest — so the fade never sits
+        // still. (Slow-mo found the hiccup this kills: with the fade keyed
+        // to q = 1, the sine ease's zero-velocity glide parked the light
+        // near-constant for ~90ms and the glow read as WAITING for the
+        // thump before finishing.) 1−sin ease-out: full decay rate from
+        // the first frame — the arrival is a crest (rise, peak, die), not
+        // a hold — landing at zero slope, no pop. The thump then crests
+        // over light that is already mostly gone: the water answers,
+        // nothing gates.
+        const LIGHT_TOTAL = D.lightLeadMs + D.lightMs;
+        let lightT: number; // ms into the light's death
+        if (pulse.q < 1) {
+          // In flight: the front leaps off the body, then GLIDES to rest on
+          // the terminal ring — arrival, not exit. Sine ease-out, NOT
+          // quadratic: both land at zero velocity, but quadratic launches at
+          // 2× the average speed, which crossed the inner rings in ~3 frames
+          // each and read as chop. Sine peaks at 1.57×, so ring crossings
+          // are far more evenly spaced across the journey.
+          pulse.q = Math.min(1, pulse.q + dt * W.pulse.speedPerSec);
+          const q = pulse.q;
+          const easeOut = Math.sin(q * Math.PI * 0.5);
+          const startU = W.pulse.fromScale * W.innerRadius;
+          radiusU = startU + (pulse.stopU - startU) * easeOut;
+          // Energy thins a little in flight — front-loaded, the body SENDS.
+          // (An old (1 − q⁵) term extinguished everything at arrival; the
+          // light died the frame it landed and read as anticlimax.)
+          const energy = 1 - q * 0.35;
+          // Time to geometric arrival at q's constant rate:
+          lightT = Math.max(0, D.lightLeadMs - ((1 - q) / W.pulse.speedPerSec) * 1000);
+          washE = energy;
+          kickE = W.pulse.kickAmpU * energy;
+        } else {
+          // Landed. The kernel parks on the terminal ring, and light and
+          // water part ways: the light finishes its death clock while the
+          // WATER keeps moving — the kick relaxation rides the full-dwell
+          // raised cosine and a damped-sine thump lands on top: heave,
+          // slosh back, a fainter after-thump. All envelopes are
+          // value-continuous at touchdown and zero-slope at their ends.
+          pulse.d = Math.min(1, pulse.d + (dt * 1000) / D.ms);
+          const tau = (pulse.d * D.ms) / 1000; // seconds since touchdown
+          radiusU = pulse.stopU;
+          lightT = D.lightLeadMs + tau * 1000;
+          washE = ARRIVAL;
+          const move = 0.5 * (1 + Math.cos(Math.PI * pulse.d));
+          kickE =
+            W.pulse.kickAmpU * ARRIVAL * move +
+            D.thumpAmpU * Math.exp(-tau * D.thumpDecayPerSec) * Math.sin(TAU * D.thumpHz * tau);
+        }
+        // The shared fade + collapse: the light dies on the one clock, and
+        // its kernel half-width converges to the terminal ring on that same
+        // clock — the shockwave dims WHILE it lands, one gesture, so the
+        // neighbors extinguish in sequence and the light is never a frozen
+        // band (slow-mo showed exactly that before the collapse: ~100ms
+        // static, then a synchronized fade — read as "jumps to gone").
+        const lightProg = Math.min(1, lightT / LIGHT_TOTAL);
+        washE *= 1 - Math.sin((Math.PI / 2) * lightProg);
+        const washWidthU = W.pulse.kickWidthU * (1 - lightProg) + 1;
         for (let i = 0; i < radii.length && i < kicks.length; i += 1) {
-          const span = Math.abs(radiusU - radii[i]) / W.pulse.kickWidthU;
+          const gap = Math.abs(radiusU - radii[i]);
+          const span = gap / W.pulse.kickWidthU;
           if (span < 1) {
             // Raised cosine (Hann), NOT a squared falloff: zero slope at the
             // apex AND at both edges, so a ring brightens and dims with no
             // corner. `(1−span)²` peaked at a cusp — a visible tick as the
             // front passed each ring — and carried less energy mid-span, so
             // fewer rings overlapped.
-            const k = 0.5 * (1 + Math.cos(Math.PI * span));
-            kicks[i] += W.pulse.kickAmpU * k * energy;
-            wash[i] += k * energy; // same kernel: light and heave are one front
+            kicks[i] += kickE * 0.5 * (1 + Math.cos(Math.PI * span));
+          }
+          // The light rides its own (collapsing) kernel — identical to the
+          // kick's in flight, converging on the terminal ring in the dwell.
+          const spanW = gap / washWidthU;
+          if (spanW < 1) {
+            wash[i] += washE * 0.5 * (1 + Math.cos(Math.PI * spanW));
           }
         }
       }
@@ -869,8 +947,9 @@ export function AsAboveApp() {
         }
       }
 
-      // The writing-light advances over the stone.
-      writeEngraveFrame(now);
+      // The writing-light advances over the stone (virtual clock — the
+      // sweep and its candle stretch with the dial).
+      writeEngraveFrame(st.vnow);
     };
 
     raf = requestAnimationFrame(step);
