@@ -707,15 +707,14 @@ main[data-decode='decoding'] .tablet-text {
     inset 0 -8px 14px -10px rgba(8, 18, 36, 0.3);
   transition: box-shadow 180ms ease;
 }
-/* FROST — this branch's finish: frosted glass TINTED IN THE SKY'S OWN
-   DEEP TONE (--wave-edge: purple under the sun, dark blue under the
-   moon — theme-fade glides it), lighter and blurrier than smoke: a
-   colored pane, not a dark one. --glass-edge inset hairline and the
-   specular whispers stay. */
+/* FROST — this branch's finish: a FLAT, OPAQUE frosted pill in the sky's
+   own deep tone (--wave-edge, pulled a shade toward black so it never
+   camouflages against the outermost ring; theme-fade glides it). The
+   scene is busy by design — the key counters it: nothing shows through,
+   no backdrop sampling at all. The specular whispers keep it frosted
+   glass rather than plastic. */
 .glass-key[data-finish='frost'] {
-  background: color-mix(in oklab, var(--wave-edge) 58%, transparent);
-  backdrop-filter: blur(12px) saturate(1.5);
-  -webkit-backdrop-filter: blur(12px) saturate(1.5);
+  background: color-mix(in oklab, var(--wave-edge) 88%, black);
   box-shadow:
     inset 0 1px 0 color-mix(in oklab, var(--glass-edge) 70%, transparent),
     0 22px 44px -14px rgba(0, 0, 0, 0.4),
