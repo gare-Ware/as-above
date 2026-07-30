@@ -96,6 +96,10 @@ interface EngineState {
       last written opacity so idle frames skip the DOM entirely. */
   wash: number[];
   washPrev: number[];
+  /** The key's ember — the ripple's light sampled AT the terminal ring,
+      mirrored to `--key-ember` on the key zone (frost's ember layer and
+      rim read it). Last written value; idle frames skip the DOM. */
+  lastEmber: number;
   /** performance.now() of the last fire — the gulp envelope's birth. */
   gulpStart: number;
   /** Virtual time the intro opened (= t0): the ring birth's clock. */
@@ -214,6 +218,7 @@ export function AsAboveApp() {
     kicks: Array.from({ length: TABLET.waves.ringCount }, () => 0),
     wash: Array.from({ length: TABLET.waves.ringCount }, () => 0),
     washPrev: Array.from({ length: TABLET.waves.ringCount }, () => 0),
+    lastEmber: 0,
     gulpStart: -1e9,
     introStart: 0,
     birthDone: false,
@@ -946,6 +951,7 @@ export function AsAboveApp() {
       const wash = st.wash;
       kicks.fill(0);
       wash.fill(0);
+      let emberSum = 0;
       for (let p = 0; p < st.pulses.length; p += 1) {
         const pulse = st.pulses[p];
         if (pulse.q >= 1 && pulse.d >= 1) continue;
@@ -1023,6 +1029,13 @@ export function AsAboveApp() {
         const lightProg = Math.min(1, lightT / LIGHT_TOTAL);
         washE *= 1 - Math.sin((Math.PI / 2) * lightProg);
         const washWidthU = W.pulse.kickWidthU * (1 - lightProg) + 1;
+        // The key CATCHES the landing: the same dying light kernel sampled
+        // AT the terminal radius — the pane below the hand brightens as the
+        // front arrives and rings down on the one light clock. Same math as
+        // the wash, so it is value-continuous across the q = 1 seam and can
+        // never outlive the shockwave it belongs to.
+        const emberSpan = Math.abs(radiusU - pulse.stopU) / washWidthU;
+        if (emberSpan < 1) emberSum += washE * 0.5 * (1 + Math.cos(Math.PI * emberSpan));
         for (let i = 0; i < radii.length && i < kicks.length; i += 1) {
           const gap = Math.abs(radiusU - radii[i]);
           const span = gap / W.pulse.kickWidthU;
@@ -1041,6 +1054,14 @@ export function AsAboveApp() {
             wash[i] += washE * 0.5 * (1 + Math.cos(Math.PI * spanW));
           }
         }
+      }
+      // The ember write — ONE CSS var on the key's zone; frost's ember
+      // layer and rim consume it. Snapped to zero below perception so the
+      // idle world writes nothing.
+      const ember = emberSum < 0.002 ? 0 : Math.min(1, emberSum);
+      if (ember !== st.lastEmber) {
+        keyZoneRef.current?.style.setProperty('--key-ember', ember.toFixed(3));
+        st.lastEmber = ember;
       }
 
       // The sea: a phase-lagged crest travels the rings outward forever; the

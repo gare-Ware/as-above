@@ -707,19 +707,122 @@ main[data-decode='decoding'] .tablet-text {
     inset 0 -8px 14px -10px rgba(8, 18, 36, 0.3);
   transition: box-shadow 180ms ease;
 }
-/* FROST — this branch's finish: a FLAT, OPAQUE frosted pill in the sky's
+/* FROST — this branch's finish: a FLAT, MATTE frosted pill in the sky's
    own deep tone (--wave-edge, pulled a shade toward black so it never
    camouflages against the outermost ring; theme-fade glides it). The
    scene is busy by design — the key counters it: nothing shows through,
-   no backdrop sampling at all. The specular whispers keep it frosted
-   glass rather than plastic. */
+   no backdrop sampling at all, and no wet specular dressing — the
+   curvature cues (gloss band, glint pool, cap streaks, cylinder tint)
+   are what read as a bubble, so frost drops them and keeps only an even
+   hairline rim. What it wears instead: a fine grain (matte tooth), the
+   aurora (slow interior blooms — the gem's inclusion language), and the
+   EMBER — the ripple's landing light caught on the pane (engine-written
+   --key-ember on the zone). */
 .glass-key[data-finish='frost'] {
   background: color-mix(in oklab, var(--wave-edge) 88%, black);
   box-shadow:
-    inset 0 1px 0 color-mix(in oklab, var(--glass-edge) 70%, transparent),
-    0 22px 44px -14px rgba(0, 0, 0, 0.4),
-    0 4px 14px rgba(0, 0, 0, 0.18);
+    inset 0 1px 0 color-mix(in oklab, var(--glass-edge) 42%, transparent),
+    0 18px 38px -16px rgba(0, 0, 0, 0.38),
+    0 3px 12px rgba(0, 0, 0, 0.16);
   transition: background-color var(--theme-fade) ease, box-shadow 180ms ease;
+}
+/* Matte means no highlights that imply a curved wet surface. */
+.glass-key[data-finish='frost'] .key-tint,
+.glass-key[data-finish='frost'] .key-gloss,
+.glass-key[data-finish='frost'] .key-glint,
+.glass-key[data-finish='frost'] .key-caps {
+  display: none;
+}
+/* The rim stays, but EVEN — a faint uniform hairline, no hot top curve.
+   It CATCHES the ripple's landing (--key-ember, engine-written on the
+   zone): the hairline flushes with the light for the ember's breath. */
+.glass-key[data-finish='frost'] .key-rim {
+  background: rgba(255, 255, 255, calc(0.13 + var(--key-ember, 0) * 0.24));
+}
+/* Matte tooth: a fine static turbulence grain — what makes frosted read
+   as SANDED glass instead of paint. Overlay lifts it from the deep base
+   without a visible speckle color; the copy (z-index 1) rides above. */
+.glass-key[data-finish='frost']::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+  background-size: 160px 160px;
+  mix-blend-mode: overlay;
+  opacity: 0.09;
+  pointer-events: none;
+}
+/* Interior light: the gem has inclusions; the frosted pane has AURORA —
+   two soft blooms in the sky's own light tones (halo left, pulse right)
+   diffusing through the matte body. Solid blurred ellipses, NOT
+   gradients, so their color rides the theme fade like every token
+   consumer. Drift is ambient-ranked: tiny, slow, incommensurate. */
+.key-aurora {
+  display: none;
+}
+.glass-key[data-finish='frost'] .key-aurora {
+  display: block;
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  overflow: hidden;
+  pointer-events: none;
+}
+.glass-key[data-finish='frost'] .key-aurora::before,
+.glass-key[data-finish='frost'] .key-aurora::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(22px);
+  transition: background-color var(--theme-fade) ease;
+}
+.glass-key[data-finish='frost'] .key-aurora::before {
+  left: -14%;
+  top: -55%;
+  width: 62%;
+  height: 210%;
+  background: color-mix(in oklab, var(--halo) 30%, transparent);
+}
+.glass-key[data-finish='frost'] .key-aurora::after {
+  right: -14%;
+  bottom: -55%;
+  width: 62%;
+  height: 210%;
+  background: color-mix(in oklab, var(--pulse) 24%, transparent);
+}
+/* The ember: the ripple's landing light arriving ON the pane — engine-
+   driven (--key-ember rides the same dying-light kernel as the wash, so
+   the glow can never outlive the shockwave). Light falls from above:
+   the front comes DOWN from the body. */
+.key-ember {
+  display: none;
+}
+.glass-key[data-finish='frost'] .key-ember {
+  display: block;
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: var(--key-ember, 0);
+  background: radial-gradient(
+    130% 170% at 50% -45%,
+    color-mix(in oklab, var(--pulse) 58%, transparent) 0%,
+    transparent 70%
+  );
+}
+/* Pressed: matte feedback — the pane lifts a shade and settles closer to
+   the floor; no white glass glow (that's the clear pill's language). */
+.glass-key[data-finish='frost'][data-pressed='true'] {
+  background: color-mix(
+    in oklab,
+    color-mix(in oklab, var(--wave-edge) 88%, black) 88%,
+    white
+  );
+  box-shadow:
+    inset 0 1px 0 color-mix(in oklab, var(--glass-edge) 42%, transparent),
+    0 10px 22px -12px rgba(0, 0, 0, 0.34),
+    0 2px 8px rgba(0, 0, 0, 0.14);
 }
 
 /* SMOKE — the poster-intro branch's finish (?key=smoke here): the pill
@@ -1053,6 +1156,12 @@ main[data-decode='decoding'] .tablet-text {
   [data-motion='live'] .g-tw-c {
     animation: glyph-flutter 16s ease-in-out infinite alternate;
   }
+  [data-motion='live'] .key-aurora::before {
+    animation: key-aurora-drift 21s ease-in-out infinite alternate;
+  }
+  [data-motion='live'] .key-aurora::after {
+    animation: key-aurora-drift 29s ease-in-out infinite alternate-reverse;
+  }
   [data-motion='live'] .gem-inclusion-a {
     animation: inclusion-drift 23s ease-in-out infinite alternate;
   }
@@ -1070,6 +1179,14 @@ main[data-decode='decoding'] .tablet-text {
   }
 }
 
+@keyframes key-aurora-drift {
+  from {
+    transform: translate(-6%, -4%) scale(1);
+  }
+  to {
+    transform: translate(7%, 5%) scale(1.14);
+  }
+}
 @keyframes star-tw {
   from {
     opacity: 0.22;

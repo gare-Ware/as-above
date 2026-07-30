@@ -254,11 +254,17 @@ export const TriggerKey = forwardRef<
       )}
       {/* Flat-glass grade veil — WebKit never mounts .key-scene at all. */}
       <span className="key-grade" aria-hidden="true" />
+      {/* Frost only: slow interior light blooms — the gem's inclusion
+          language in the sky's own tones (CSS hides it on other finishes). */}
+      <span className="key-aurora" aria-hidden="true" />
       <span className="key-tint" aria-hidden="true" />
       <span className="key-rim" aria-hidden="true" />
       <span className="key-gloss" aria-hidden="true" />
       <span className="key-glint" aria-hidden="true" />
       <span className="key-caps" aria-hidden="true" />
+      {/* Frost only: the ripple's landing light, driven by the engine via
+          --key-ember on the key zone — the pane catches the touchdown. */}
+      <span className="key-ember" aria-hidden="true" />
       <KeyCopy />
     </button>
   );
