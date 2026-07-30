@@ -707,12 +707,13 @@ main[data-decode='decoding'] .tablet-text {
     inset 0 -8px 14px -10px rgba(8, 18, 36, 0.3);
   transition: box-shadow 180ms ease;
 }
-/* FROST — this branch's finish: the console's own themed liquid glass
-   (--glass-tint body, --glass-edge inset hairline, backdrop blur — the
-   exact material the chips wore), promoted to the trigger. The word
-   ghosts through a LIGHT pane here; the specular whispers stay. */
+/* FROST — this branch's finish: frosted glass TINTED IN THE SKY'S OWN
+   DEEP TONE (--wave-edge: purple under the sun, dark blue under the
+   moon — theme-fade glides it), lighter and blurrier than smoke: a
+   colored pane, not a dark one. --glass-edge inset hairline and the
+   specular whispers stay. */
 .glass-key[data-finish='frost'] {
-  background: var(--glass-tint);
+  background: color-mix(in oklab, var(--wave-edge) 58%, transparent);
   backdrop-filter: blur(12px) saturate(1.5);
   -webkit-backdrop-filter: blur(12px) saturate(1.5);
   box-shadow:
