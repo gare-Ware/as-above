@@ -13,9 +13,9 @@
 // pass beneath. On WebKit, where that raster path is unreliable, the copy
 // is removed and the glass becomes a transparent window onto the real
 // field. Above the scene: a whisper of tint, a hairline uneven rim (never a
-// solid border), a slim top gloss, a bottom glint, mirrored cap streaks. No
-// label — the nested pyramid of the Emerald Tablet cover says what words
-// would cheapen. The press is a major moment: it fires
+// solid border), a slim top gloss, a bottom glint, mirrored cap streaks.
+// The pill carries SO BELOW in the display voice — the poster's answering
+// line, not a label (see KeyCopy). The press is a major moment: it fires
 // IMMEDIATELY (pointerdown, never click), sinks like pressed glass, DEEPENS
 // THE LENS (cheap-path setStrength) — and, via the orchestrator, the SKY
 // answers: the ripple is born at the body and cascades down through the
@@ -71,17 +71,17 @@ function keyFinish(): KeyFinish {
   return k === 'glass' || k === 'smoke' ? k : 'frost';
 }
 
-/** The emblem: an equilateral triangle, its exact incircle, and the
-    triangle inscribed in THAT — the cover's nesting, three strokes. */
-function Emblem() {
+/** The key's copy: the other half of the poster's sentence. AS ABOVE
+    fills the sky in the display voice; the key in the thumb zone answers
+    SO BELOW in a miniature of the same voice — not a label (a label would
+    cheapen it; "TRIGGER" was never considered), the completion of the
+    line. Pressing it literally makes above answer below. (This replaced
+    the nested-pyramid emblem — the sentence beats the sigil.) */
+function KeyCopy() {
   return (
-    <svg className="key-emblem" viewBox="0 0 32 32" aria-hidden="true">
-      <g fill="none" strokeLinejoin="round" strokeLinecap="round">
-        <path d="M 16 3.5 L 26.83 22.25 L 5.17 22.25 Z" />
-        <circle cx="16" cy="16" r="6.25" />
-        <path d="M 16 9.75 L 21.41 19.13 L 10.59 19.13 Z" />
-      </g>
-    </svg>
+    <span className="key-copy" aria-hidden="true">
+      SO BELOW
+    </span>
   );
 }
 
@@ -259,7 +259,7 @@ export const TriggerKey = forwardRef<
       <span className="key-gloss" aria-hidden="true" />
       <span className="key-glint" aria-hidden="true" />
       <span className="key-caps" aria-hidden="true" />
-      <Emblem />
+      <KeyCopy />
     </button>
   );
 });

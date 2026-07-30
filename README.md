@@ -12,8 +12,7 @@ Tablet: a rounded, perfectly symmetric slab of deep emerald, its top bevel
 catching the sky, its pale-jade lettering engraved into the stone. In the
 thumb zone, the app's hero control: a wide pill of FROSTED liquid glass —
 the cover's word ghosting through the pane, a hairline of light along its
-rim — carrying the nested pyramid of the Emerald Tablet's cover instead
-of a label. Pressing it engraves a fun
+rim — answering the poster in its own voice: **SO BELOW**. Pressing it engraves a fun
 conspiracy fact about whatever is above: one downward pass of gold
 writing-light lifts the old letters away just ahead of landing the new
 ones — igniting as pure light, cooling into carved jade — with only a thin

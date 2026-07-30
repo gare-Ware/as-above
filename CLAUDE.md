@@ -298,8 +298,10 @@ continuous liquid motion through everything, all the time. The rules:
   bent scene are whispers: `.key-tint` (faint white, never frost) ·
   `.key-rim` (1px UNEVEN vertical-gradient ring via mask-xor — never a
   solid border) · `.key-gloss`/`.key-glint`/`.key-caps` (slim top band,
-  bottom pooling, mirrored cap streaks — symmetry law). It carries the
-  nested-pyramid emblem, no label (e2e finds it by aria-label /trigger/i).
+  bottom pooling, mirrored cap streaks — symmetry law). It carries
+  **SO BELOW** in the display voice + `--ink` (`.key-copy`) — the poster's
+  ANSWERING LINE, not a label; it replaced the nested-pyramid emblem on
+  this branch (e2e finds the key by aria-label /trigger/i).
   Active console chips answer the gem in jade (`--control-active`).
 - **Sky tokens**: SUN is the resting read; `[data-mode='moon']` overrides
   (mirrored onto `<html>` so body paint follows). Each mode defines

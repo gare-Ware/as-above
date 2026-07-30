@@ -870,15 +870,27 @@ main[data-decode='decoding'] .tablet-text {
     inset 0 -6px 12px -9px rgba(8, 18, 36, 0.3),
     inset 0 0 24px rgba(255, 255, 255, 0.2);
 }
-/* The emblem — the nested pyramid, engraved in light. */
-.key-emblem {
+/* The key's copy — SO BELOW: a miniature of the poster's own voice and
+   ink (the answering line, not a label). Tracked caps; the left padding
+   swallows the trailing letter-space so the centering is optical (the
+   HATCH wordmark compensation). The dark shadow guarantees the line
+   against whatever the pane floats over — cream letterforms or the deep
+   field — since the backdrop varies by viewport and sky. */
+.key-copy {
   position: relative;
   z-index: 1;
-  height: 58%;
-  aspect-ratio: 1;
-  stroke: rgba(255, 255, 255, 0.92);
-  stroke-width: 1.7;
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35));
+  font-family: var(--font-display), serif;
+  font-size: clamp(12.5px, calc(var(--stage-h) * 0.019), 15.5px);
+  font-weight: 650;
+  letter-spacing: 0.3em;
+  padding-left: 0.3em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--ink);
+  transition: color var(--theme-fade) ease;
+  text-shadow:
+    0 1px 6px rgba(0, 0, 0, 0.42),
+    0 0 1px rgba(0, 0, 0, 0.25);
 }
 @media (hover: hover) and (pointer: fine) {
   .glass-key:hover .key-gloss {
