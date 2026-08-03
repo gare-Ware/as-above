@@ -206,6 +206,36 @@ body {
   fill: var(--ink);
   transition: fill var(--theme-fade) ease;
 }
+/* The settled world: the poster recedes into the sky's register. The ink
+   entrance still lands at full --ink (the intro keeps its drama); the
+   letters start cooling toward the field ON the key's touchdown — the
+   backdrop steps back at the same beat the hand's control arrives — so
+   the poster's luminance rank matches its motion rank: BACKDROP, beneath
+   sun and stone. Same glide grammar as every token consumer
+   (--theme-fade). */
+main:is([data-intro='key'], [data-intro='done']) .poster-line text {
+  /* The recede target is a MID-field tone (root pulled toward edge), not
+     the deepest edge: cream toward pure #4a2158 grays out in oklab and
+     the letters went ashen against the warm sun bands — off the
+     pastel-psychedelic register. The root's warmth keeps the dimmed ink
+     alive in both modes. */
+  fill: color-mix(
+    in oklab,
+    var(--ink) 55%,
+    color-mix(in oklab, var(--wave-root) 35%, var(--wave-edge))
+  );
+}
+/* While the tablet speaks, the backdrop holds its breath — one step
+   further down. Fast attack (the fire's cause), slow release (the base
+   rule's theme-fade carries the recovery). */
+main[data-decode='decoding'] .poster-line text {
+  fill: color-mix(
+    in oklab,
+    var(--ink) 40%,
+    color-mix(in oklab, var(--wave-root) 35%, var(--wave-edge))
+  );
+  transition: fill 420ms ease;
+}
 .stage {
   position: relative;
   z-index: 1; /* above the wave field */
