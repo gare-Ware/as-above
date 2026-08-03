@@ -201,6 +201,34 @@ body {
   width: 100%;
   overflow: visible;
 }
+/* THE MASTHEAD — ≤640px (the drawer's breakpoint) the stack yields to one
+   full-bleed "AS ABOVE" line high in the sky, the sun's crown biting its
+   middle (body over word, never the reverse). The stack's crop at phone
+   width left only accidental letter scraps — a crop reads as composition
+   only while the surviving shape stays recognizable. Anchored in stage
+   coordinates (the body rides at 0.17·stage-h in the same system), so the
+   sun–word registration holds at every phone size; safe-area guard keeps
+   a notch out of the letterforms. */
+.poster-line-solo {
+  display: none;
+}
+@media (max-width: 640px) {
+  .poster {
+    width: 96vw; /* one line needs no stack height budget */
+    gap: 0;
+    top: max(
+      calc((100% - var(--stage-h)) / 2 + var(--stage-h) * 0.012),
+      env(safe-area-inset-top)
+    );
+    transform: translate(-50%, 0);
+  }
+  .poster-line {
+    display: none;
+  }
+  .poster-line-solo {
+    display: block;
+  }
+}
 .poster-line text {
   font-family: var(--font-display), serif;
   fill: var(--ink);
