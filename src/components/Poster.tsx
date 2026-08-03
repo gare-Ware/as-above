@@ -35,10 +35,17 @@ const BASELINE_EM = 0.717;
 /** A whisker under the overshoot, so round caps never shave the box. */
 const HEIGHT_EM = 0.736;
 
-/** fontSize tuned so each line's natural width ≈ the 1000u measure. */
+/** fontSize tuned so each line's natural width ≈ the 1000u measure.
+    `stagger` is the entrance-delay index — explicit, not the array index. */
 const LINES = [
-  { text: 'AS', fontSize: 690 },
-  { text: 'ABOVE', fontSize: 286 },
+  { text: 'AS', fontSize: 690, stagger: 0, cls: 'poster-line' },
+  { text: 'ABOVE', fontSize: 286, stagger: 1, cls: 'poster-line' },
+  // THE MASTHEAD — the phone composition (≤640px, the drawer's breakpoint):
+  // the stack yields to one full-bleed line high in the sky band, the sun's
+  // crown biting its middle. CSS swaps which lines display; all three stay
+  // mounted so a resize never re-runs the entrance. Stagger 0 — on a phone
+  // it is the only visible line and must not wait for a hidden one.
+  { text: 'AS ABOVE', fontSize: 208, stagger: 0, cls: 'poster-line poster-line-solo' },
 ] as const;
 
 export function Poster({ show, reduced }: { show: boolean; reduced: boolean }) {
@@ -67,13 +74,13 @@ export function Poster({ show, reduced }: { show: boolean; reduced: boolean }) {
 
   return (
     <h1 className="poster" aria-label="AS ABOVE">
-      {LINES.map(({ text, fontSize }, i) => {
+      {LINES.map(({ text, fontSize, stagger, cls }) => {
         const height = Math.round(fontSize * HEIGHT_EM);
         return (
           <motion.div
             key={text}
-            className="poster-line"
-            custom={i}
+            className={cls}
+            custom={stagger}
             variants={line}
             initial="hidden"
             animate={show ? 'show' : 'hidden'}
