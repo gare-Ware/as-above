@@ -272,13 +272,21 @@ main:not([data-intro='key']):not([data-intro='done']) .key-zone {
   pointer-events: none;
 }
 @media (prefers-reduced-motion: no-preference) {
-  main:not([data-intro='key']):not([data-intro='done']) .key-zone {
+  main[data-motion='live']:not([data-intro='key']):not([data-intro='done']) .key-zone {
     transform: translateY(9px);
   }
 }
-main:not([data-intro='done']) .console-chip {
+main:not([data-intro='key']):not([data-intro='done']) .console-chip {
   opacity: 0;
   pointer-events: none;
+}
+/* Reduced/STILL is one short group crossfade. These doors open at `key`
+   immediately, stay inert, and are fully settled before `done` raises. */
+main[data-motion='still'] .key-zone {
+  transition: opacity 140ms ease-out;
+}
+main[data-motion='still'] .console-chip {
+  transition: color 200ms ease, opacity 140ms ease-out;
 }
 
 /* ── The sky — a filled disc now; the waves are its voice ── */

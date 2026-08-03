@@ -26,10 +26,12 @@ import { SLOWMO, slow, slowMs } from '@/lib/slowmo';
 import {
   TABLET,
   floatPose,
+  introPhaseAt,
   ringBirthPose,
   ringBirthTotalMs,
   springStep,
   swapPose,
+  type IntroPhase,
 } from '@/lib/tablet';
 import { Console } from './Console';
 import { Dust } from './Dust';
@@ -41,17 +43,16 @@ import { Waves, type WavesRefs } from './Waves';
 
 type DecodePhase = 'idle' | 'decoding' | 'settled';
 
-/** The intro's beats, mirrored onto <main data-intro> (the e2e/capture
-    handover — input is live from 'key' on; specs wait for 'done').
-    waves → the world is born (rings out of the sun, flare at t0)
-    poster → the word inks in (thin → black)
-    tablet → the stone's birth fire (gulp → release → condense)
-    key → the ripple lands; the key materializes on the thump
-    done → hint clock starts, console joins, the loop is the app's. */
-type IntroPhase = 'waves' | 'poster' | 'tablet' | 'key' | 'done';
-
 /** The last ring's finish — computed once (config is const). */
 const BIRTH_TOTAL_MS = ringBirthTotalMs();
+
+const INTRO_PHASE_RANK: Record<IntroPhase, number> = {
+  waves: 0,
+  poster: 1,
+  tablet: 2,
+  key: 3,
+  done: 4,
+};
 
 /** One ripple in flight: born at the body's center once its wait (the gulp
     overlap) runs out, gliding to rest on stopU — the terminal ring, measured
@@ -104,6 +105,14 @@ interface EngineState {
   gulpStart: number;
   /** Virtual time the intro opened (= t0): the ring birth's clock. */
   introStart: number;
+  /** The phase mirrored to React/data-intro. Kept here so the rAF clock is
+      the sole scheduler and a visibility pause cannot advance the doors. */
+  introPhase: IntroPhase;
+  /** The tablet birth is claimed exactly once at its virtual-clock beat. */
+  tabletBorn: boolean;
+  /** The tablet condense launches on the intro pulse's virtual-clock birth,
+      never from a real-time timer that could run while rAF is suspended. */
+  introReleasePending: boolean;
   /** Raised once every ring holds its resting pose (opacity 1) — after
       this the birth math never runs again. */
   birthDone: boolean;
@@ -221,6 +230,9 @@ export function AsAboveApp() {
     lastEmber: 0,
     gulpStart: -1e9,
     introStart: 0,
+    introPhase: 'waves',
+    tabletBorn: false,
+    introReleasePending: false,
     birthDone: false,
     vnow: 0,
     engrave: null,
@@ -283,14 +295,16 @@ export function AsAboveApp() {
   }, []);
 
   // Live mirrors for the loop (props/state read per frame without re-binding).
+  const inert = reduced || !motionLive || !TABLET.alive;
+  // Full motion opens input on the key's landing. Reduced/STILL exposes the
+  // quiet crossfade immediately but keeps it inert until the shared fade is
+  // actually settled at `done`.
+  const introInteractive = introPhase === 'done' || (!inert && introPhase === 'key');
   const live = useRef({ inert: false, mode: 'sun' as BodyId, introLive: false });
   live.current = {
-    inert: reduced || !motionLive || !TABLET.alive,
+    inert,
     mode: oracle?.mode ?? 'sun',
-    // Input goes live the moment the key materializes (the ripple's
-    // landing) — the answer lands where the hand is, and the hand may
-    // answer straight back.
-    introLive: introPhase === 'key' || introPhase === 'done',
+    introLive: introInteractive,
   };
 
   // ── Boot: mint the session, wait for the faces, raise the ready signal ─────
@@ -620,27 +634,25 @@ export function AsAboveApp() {
     );
   }, []);
 
-  /** The stone's birth — the intro's one real fire, spoken in the app's
-      only grammar: the sea GULPS, the ripple is born at the body on the
-      release, and the tablet CONDENSES at its station on that same beat
-      (opacity leads — born as light; the GROW spring brings the mass),
-      while the front runs on to land at the key's ring. Inert path: a
-      quiet fade, function preserved. */
-  const birthTablet = useCallback(() => {
+  /** The tablet's visible arrival. The live path calls this from the pulse
+      kernel on the exact virtual frame its ripple is born; the inert path
+      calls it immediately as part of the shared quiet crossfade. */
+  const releaseTabletBirth = useCallback(() => {
     const st = eng.current;
     const el = tabletRefs.birth.current;
     if (live.current.inert) {
-      if (el) animate(el, { opacity: [0, 1] }, { duration: 0.4, ease: 'easeOut' });
+      if (el) {
+        animate(
+          el,
+          { opacity: [0, 1] },
+          { duration: REDUCED_FADE_MS / 1000, ease: 'easeOut' },
+        );
+      }
       return;
     }
-    firePulse();
-    st.swell = 1;
-    const launchMs = TABLET.waves.gulp.ms * TABLET.waves.gulp.launchFrac;
     // The arrival carries weight: a half-strength dip kick at the release
     // (the moment the stone becomes visible), never at the unseen fire.
-    window.setTimeout(() => {
-      eng.current.dip.v += TABLET.dip.kickPxPerSec * 0.5;
-    }, slowMs(launchMs));
+    st.dip.v += TABLET.dip.kickPxPerSec * 0.5;
     if (el) {
       animate(
         el,
@@ -651,7 +663,6 @@ export function AsAboveApp() {
           transform: [`scale(${TABLET.intro.tabletBirth.fromScale})`, 'scale(1)'],
         },
         slow({
-          delay: launchMs / 1000,
           opacity: { duration: TABLET.intro.tabletBirth.opacityMs / 1000, ease: 'easeOut' },
           transform: { type: 'spring', ...TABLET.grow },
         }),
@@ -659,55 +670,24 @@ export function AsAboveApp() {
     }
     // Refs are stable containers; nothing here re-binds.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [firePulse]);
+  }, []);
 
-  // ── THE INTRO — once per load: world → word → stone → key → live ───────────
-  useEffect(() => {
-    if (!booted) return;
-    const I = TABLET.intro;
-    let cancelled = false;
-    const timers: number[] = [];
-    const begin = () => {
-      if (cancelled) return;
-      if (live.current.inert) {
-        // Reduced motion / STILL: one quiet crossfade — everything joins at
-        // rest and input goes live almost immediately. data-intro still
-        // walks to 'done' so tests and captures see one contract.
-        birthTablet();
-        timers.push(window.setTimeout(() => setIntroPhase('done'), I.reducedDoneMs));
-        return;
-      }
-      timers.push(
-        window.setTimeout(() => setIntroPhase('poster'), slowMs(I.posterAtMs)),
-        window.setTimeout(() => {
-          setIntroPhase('tablet');
-          birthTablet();
-        }, slowMs(I.tabletAtMs)),
-        window.setTimeout(() => setIntroPhase('key'), slowMs(I.keyAtMs)),
-        window.setTimeout(() => setIntroPhase('done'), slowMs(I.doneAtMs)),
-      );
-    };
-    // A tab opened in the BACKGROUND must not spend the intro unseen: rAF
-    // is suspended while hidden, so the engine's clock (ring birth, flare)
-    // already waits — hold the beat timers with it and open the world on
-    // first sight, or the phases outrun the frozen sea and the user tabs
-    // in to a torn opening.
-    const onVis = () => {
-      if (document.visibilityState !== 'visible') return;
-      document.removeEventListener('visibilitychange', onVis);
-      begin();
-    };
-    if (document.visibilityState === 'hidden') {
-      document.addEventListener('visibilitychange', onVis);
-    } else {
-      begin();
+  /** The stone's birth — the intro's one real fire, spoken in the app's
+      only grammar: the sea GULPS, the ripple is born at the body on the
+      release, and the tablet CONDENSES at its station on that same beat
+      (opacity leads — born as light; the GROW spring brings the mass),
+      while the front runs on to land at the key's ring. Inert path: a
+      quiet fade, function preserved. */
+  const birthTablet = useCallback(() => {
+    const st = eng.current;
+    if (live.current.inert) {
+      releaseTabletBirth();
+      return;
     }
-    return () => {
-      cancelled = true;
-      document.removeEventListener('visibilitychange', onVis);
-      timers.forEach((t) => window.clearTimeout(t));
-    };
-  }, [booted, birthTablet]);
+    firePulse();
+    st.swell = 1;
+    st.introReleasePending = true;
+  }, [firePulse, releaseTabletBirth]);
 
   // New pick → engrave it.
   const lastSerial = useRef(0);
@@ -752,6 +732,10 @@ export function AsAboveApp() {
     // and the world's first breath is a FLARE at the body — halo + rays
     // blooming as the sea grows out of it (birth = flare, the one grammar).
     st.introStart = st.t0;
+    st.introPhase = 'waves';
+    st.tabletBorn = false;
+    st.introReleasePending = false;
+    st.birthDone = false;
     if (!live.current.inert) st.flare = 1;
     let raf = 0;
 
@@ -764,6 +748,21 @@ export function AsAboveApp() {
       st.vnow += dt * 1000;
       const t = st.vnow - st.t0;
       const L = live.current;
+
+      // THE INTRO is scheduled by this same virtual clock—not timers—so a
+      // hidden page freezes the doors, ring birth, pulse, and tablet as one.
+      // Phase writes are monotonic: a runtime reduced-motion preference
+      // change may fast-forward the opening, but can never rewind it.
+      const introT = st.vnow - st.introStart;
+      const desiredIntroPhase = introPhaseAt(introT, L.inert);
+      if (INTRO_PHASE_RANK[desiredIntroPhase] > INTRO_PHASE_RANK[st.introPhase]) {
+        st.introPhase = desiredIntroPhase;
+        setIntroPhase(desiredIntroPhase);
+      }
+      if (!st.tabletBorn && (L.inert || introT >= TABLET.intro.tabletAtMs)) {
+        st.tabletBorn = true;
+        birthTablet();
+      }
 
       // The sky swap — a spring toward the mode, reversible at any frame.
       const target = L.mode === 'moon' ? 1 : 0;
@@ -960,6 +959,10 @@ export function AsAboveApp() {
           pulse.wait -= dt * 1000;
           if (pulse.wait > 0) continue;
           st.flare = 1; // birth: halo + rays ignite as the front leaves the body
+          if (st.introReleasePending) {
+            st.introReleasePending = false;
+            releaseTabletBirth();
+          }
         }
         let radiusU: number;
         let washE: number;
@@ -1128,7 +1131,7 @@ export function AsAboveApp() {
 
     raf = requestAnimationFrame(step);
     return () => cancelAnimationFrame(raf);
-  }, [booted, writeEngraveFrame, skyRefs.sun, skyRefs.moon, skyRefs.sunHalo, skyRefs.moonHalo, skyRefs.drift, tabletRefs.drift, tabletRefs.dip, tabletRefs.aura, tabletRefs.sheen, wavesRefs.rings, wavesRefs.washes, wavesRefs.radii, lensRefs.rings, lensRefs.washes, raysRef]);
+  }, [booted, birthTablet, releaseTabletBirth, writeEngraveFrame, skyRefs.sun, skyRefs.moon, skyRefs.sunHalo, skyRefs.moonHalo, skyRefs.drift, tabletRefs.drift, tabletRefs.dip, tabletRefs.aura, tabletRefs.sheen, wavesRefs.rings, wavesRefs.washes, wavesRefs.radii, lensRefs.rings, lensRefs.washes, raysRef]);
 
   // ── Keyboard: Enter/Space fire from anywhere; S flips the sky ──────────────
   useEffect(() => {
@@ -1277,12 +1280,13 @@ export function AsAboveApp() {
             showHint={!hintRetired && introPhase === 'done'}
             onTap={fire}
           />
-          <div className="key-zone" ref={keyZoneRef}>
+          <div className="key-zone" ref={keyZoneRef} inert={!introInteractive}>
             <TriggerKey ref={keyHandle} seed={seed} lensRefs={lensRefs} onFire={fire} />
           </div>
         </div>
       </motion.div>
       <Console
+        available={introPhase === 'done'}
         open={consoleOpen}
         onToggle={() => setConsoleOpen((v) => !v)}
         mode={oracle.mode}

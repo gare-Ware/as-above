@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { TABLET, ringBirthPose, ringBirthTotalMs } from './tablet';
+import { TABLET, introPhaseAt, ringBirthPose, ringBirthTotalMs } from './tablet';
 
 // The world's birth — pure math the engine trusts unguarded: clamped at
 // both ends, monotonic in between, and finished exactly when the total
@@ -53,5 +53,22 @@ describe('ringBirthPose', () => {
     // …and NOT one frame earlier for the last ring.
     const last = TABLET.waves.ringCount - 1;
     expect(ringBirthPose(total - 16, last, R).scale).toBeLessThan(1);
+  });
+});
+
+describe('introPhaseAt', () => {
+  it('walks the full-motion beats on the shared virtual clock', () => {
+    const I = TABLET.intro;
+    expect(introPhaseAt(0, false)).toBe('waves');
+    expect(introPhaseAt(I.posterAtMs, false)).toBe('poster');
+    expect(introPhaseAt(I.tabletAtMs, false)).toBe('tablet');
+    expect(introPhaseAt(I.keyAtMs, false)).toBe('key');
+    expect(introPhaseAt(I.doneAtMs, false)).toBe('done');
+  });
+
+  it('opens the inert crossfade immediately but withholds done until it settles', () => {
+    expect(introPhaseAt(0, true)).toBe('key');
+    expect(introPhaseAt(TABLET.intro.reducedDoneMs - 1, true)).toBe('key');
+    expect(introPhaseAt(TABLET.intro.reducedDoneMs, true)).toBe('done');
   });
 });

@@ -264,6 +264,25 @@ export const TABLET = {
 
 // ── Pure helpers ─────────────────────────────────────────────────────────────
 
+/** The intro's public handover states, mirrored onto `<main data-intro>`. */
+export type IntroPhase = 'waves' | 'poster' | 'tablet' | 'key' | 'done';
+
+/**
+ * The intro phase at virtual time `tMs`. Live motion walks the full sequence;
+ * reduced/STILL exposes every quiet crossfade at once (`key`) but withholds
+ * readiness until the shared fade window has settled (`done`).
+ */
+export function introPhaseAt(tMs: number, inert: boolean): IntroPhase {
+  const t = Math.max(0, tMs);
+  const I = TABLET.intro;
+  if (inert) return t < I.reducedDoneMs ? 'key' : 'done';
+  if (t < I.posterAtMs) return 'waves';
+  if (t < I.tabletAtMs) return 'poster';
+  if (t < I.keyAtMs) return 'tablet';
+  if (t < I.doneAtMs) return 'key';
+  return 'done';
+}
+
 /** Semi-implicit Euler damped-spring step (mutates nothing; returns next). */
 export function springStep(
   x: number,
