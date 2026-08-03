@@ -1,7 +1,11 @@
 'use client';
 
-// The TRIGGER — the app's hero control: a wide pill of REAL liquid glass.
-// Deliberately the ONE object that does not wear the world's palette as
+// The TRIGGER — the app's hero control. CURRENT FINISH (this branch):
+// 'frost' — the console's themed liquid glass promoted to the trigger
+// (see keyFinish below for why the clear pill retired; ?key=smoke and
+// ?key=glass switch finishes). The clear/lens path below remains fully wired:
+// a wide pill of REAL liquid glass,
+// deliberately the ONE object that does not wear the world's palette as
 // paint — instead it holds a pixel-aligned windowed COPY of the wave field
 // (same seed, same geometry, driven by the same engine) and bends it with a
 // true feDisplacementMap lens (lib/lens.ts, the glass-demo technique): the
@@ -9,9 +13,9 @@
 // pass beneath. On WebKit, where that raster path is unreliable, the copy
 // is removed and the glass becomes a transparent window onto the real
 // field. Above the scene: a whisper of tint, a hairline uneven rim (never a
-// solid border), a slim top gloss, a bottom glint, mirrored cap streaks. No
-// label — the nested pyramid of the Emerald Tablet cover says what words
-// would cheapen. The press is a major moment: it fires
+// solid border), a slim top gloss, a bottom glint, mirrored cap streaks.
+// The pill carries SO BELOW in the display voice — the poster's answering
+// line, not a label (see KeyCopy). The press is a major moment: it fires
 // IMMEDIATELY (pointerdown, never click), sinks like pressed glass, DEEPENS
 // THE LENS (cheap-path setStrength) — and, via the orchestrator, the SKY
 // answers: the ripple is born at the body and cascades down through the
@@ -50,17 +54,34 @@ export interface LensRefs {
 
 type LensMode = 'pending' | 'flat' | 'bent';
 
-/** The emblem: an equilateral triangle, its exact incircle, and the
-    triangle inscribed in THAT — the cover's nesting, three strokes. */
-function Emblem() {
+type KeyFinish = 'frost' | 'smoke' | 'glass';
+
+/** The key's finish — the live experiment; THIS BRANCH defaults to
+    'frost': the console's own themed liquid glass (--glass-tint +
+    backdrop blur, the material the chips wear), promoted to the trigger —
+    the poster's word ghosts through a light frosted pane instead of the
+    smoke branch's dark one. The clear pill retired either way: the
+    Chromium lens bends a copy of the WAVE FIELD only, so glass over the
+    lettering showed waves without the word, and a clear pill dissolves
+    against giant cream letters. '?key=smoke' / '?key=glass' switch
+    finishes for A/B comparison. */
+function keyFinish(): KeyFinish {
+  if (typeof window === 'undefined') return 'frost';
+  const k = new URLSearchParams(window.location.search).get('key');
+  return k === 'glass' || k === 'smoke' ? k : 'frost';
+}
+
+/** The key's copy: the other half of the poster's sentence. AS ABOVE
+    fills the sky in the display voice; the key in the thumb zone answers
+    SO BELOW in a miniature of the same voice — not a label (a label would
+    cheapen it; "TRIGGER" was never considered), the completion of the
+    line. Pressing it literally makes above answer below. (This replaced
+    the nested-pyramid emblem — the sentence beats the sigil.) */
+function KeyCopy() {
   return (
-    <svg className="key-emblem" viewBox="0 0 32 32" aria-hidden="true">
-      <g fill="none" strokeLinejoin="round" strokeLinecap="round">
-        <path d="M 16 3.5 L 26.83 22.25 L 5.17 22.25 Z" />
-        <circle cx="16" cy="16" r="6.25" />
-        <path d="M 16 9.75 L 21.41 19.13 L 10.59 19.13 Z" />
-      </g>
-    </svg>
+    <span className="key-copy" aria-hidden="true">
+      SO BELOW
+    </span>
   );
 }
 
@@ -73,6 +94,9 @@ export const TriggerKey = forwardRef<
   const anim = useRef<ReturnType<typeof animate> | null>(null);
   const lens = useRef<Lens | null>(null);
   const [lensMode, setLensMode] = useState<LensMode>('pending');
+  // Client-only component (the app renders after boot), so the param read
+  // is safe at first render — the smoke pill never flashes clear.
+  const [finish] = useState<KeyFinish>(() => keyFinish());
 
   // Same seed, same pure generator, same sea — the copy is identical to
   // the field behind the key, so at rest the seam is invisible.
@@ -82,8 +106,10 @@ export const TriggerKey = forwardRef<
     // Decide before the browser's first paint of this client-only scene.
     // Until then the copy is not mounted, so production's single effect pass
     // cannot expose WebKit to even one raster of the fragile inline SVG.
-    setLensMode(lensSupported() ? 'bent' : 'flat');
-  }, []);
+    // The smoke finish never mounts the copy at all — the pill is a pane,
+    // not a window, so there is nothing to duplicate or bend.
+    setLensMode(finish === 'glass' && lensSupported() ? 'bent' : 'flat');
+  }, [finish]);
 
   useLayoutEffect(() => {
     if (lensMode !== 'bent') return;
@@ -164,6 +190,7 @@ export const TriggerKey = forwardRef<
       type="button"
       className="glass-key"
       data-lens={lensMode}
+      data-finish={finish}
       data-pressed="false"
       aria-label="Trigger — the tablet answers"
       onPointerDown={onPointerDown}
@@ -227,12 +254,18 @@ export const TriggerKey = forwardRef<
       )}
       {/* Flat-glass grade veil — WebKit never mounts .key-scene at all. */}
       <span className="key-grade" aria-hidden="true" />
+      {/* Frost only: slow interior light blooms — the gem's inclusion
+          language in the sky's own tones (CSS hides it on other finishes). */}
+      <span className="key-aurora" aria-hidden="true" />
       <span className="key-tint" aria-hidden="true" />
       <span className="key-rim" aria-hidden="true" />
       <span className="key-gloss" aria-hidden="true" />
       <span className="key-glint" aria-hidden="true" />
       <span className="key-caps" aria-hidden="true" />
-      <Emblem />
+      {/* Frost only: the ripple's landing light, driven by the engine via
+          --key-ember on the key zone — the pane catches the touchdown. */}
+      <span className="key-ember" aria-hidden="true" />
+      <KeyCopy />
     </button>
   );
 });

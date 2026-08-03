@@ -12,6 +12,7 @@ import type { BodyId } from '@/data/facts';
 import { PANEL_SPRING, PRESS } from '@/lib/motion';
 
 interface ConsoleProps {
+  available: boolean;
   open: boolean;
   onToggle: () => void;
   mode: BodyId;
@@ -24,6 +25,7 @@ interface ConsoleProps {
 }
 
 export function Console({
+  available,
   open,
   onToggle,
   mode,
@@ -35,7 +37,7 @@ export function Console({
   isMobile,
 }: ConsoleProps) {
   return (
-    <>
+    <div className="console-root" inert={!available}>
       <motion.button
         type="button"
         onClick={onToggle}
@@ -88,7 +90,7 @@ export function Console({
           enter — trigger · s — sky
         </p>
       </motion.div>
-    </>
+    </div>
   );
 }
 

@@ -14,6 +14,7 @@ const page = await browser.newPage({ viewport: { width: 430, height: 900 } });
 
 await page.goto('http://localhost:3000/', { waitUntil: 'domcontentloaded' });
 await page.waitForSelector('main[data-ready="true"]', { timeout: 20_000 });
+await page.waitForSelector('main[data-intro="done"]', { timeout: 20_000 });
 
 const key = page.getByRole('button', { name: /trigger/i });
 

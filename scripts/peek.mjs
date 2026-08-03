@@ -16,8 +16,11 @@ const page = await browser.newPage({ viewport: { width: 430, height: 900 } });
 const shot = (name) => page.screenshot({ path: `${out}/${name}.png` });
 
 await page.goto('http://localhost:3000/', { waitUntil: 'domcontentloaded' });
-// Never race the mount: wait for the app's own ready signal.
+// Never race the mount: wait for the app's own ready signal, then let the
+// intro finish (this script judges the LOOP; peek-intro.mjs judges the
+// opening).
 await page.waitForSelector('main[data-ready="true"]', { timeout: 20_000 });
+await page.waitForSelector('main[data-intro="done"]', { timeout: 20_000 });
 
 // ── Idle: the levitation and the idle script ──
 await page.waitForTimeout(2600);

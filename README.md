@@ -1,15 +1,18 @@
 # AS ABOVE
 
-A small, motion-saturated devotional scene. One thing hangs in the sky — the
+A small, motion-saturated devotional scene, set on its own magazine cover:
+**AS / ABOVE** in colossal variable serif fills the screen behind
+everything, with the sun hanging between the A and the S and the tablet
+floating over the word — the scene overlaps its title, poster-style,
+always. One thing hangs in the sky — the
 sun a pure luminous disc, the moon a bare pearl veiled in drifting fog — and
 its color radiates outward as a field of slow, organic waves that fill the
 whole viewport in pastel-psychedelic shades. Before it floats the Emerald
 Tablet: a rounded, perfectly symmetric slab of deep emerald, its top bevel
 catching the sky, its pale-jade lettering engraved into the stone. In the
-thumb zone, the app's hero control: a wide pill of clear LIQUID glass —
-deliberately the only unthemed object on stage, the scene visible through
-it, refraction pooling at its rim — carrying the nested pyramid of the
-Emerald Tablet's cover instead of a label. Pressing it engraves a fun
+thumb zone, the app's hero control: a wide pill of FROSTED liquid glass —
+the cover's word ghosting through the pane, a hairline of light along its
+rim — answering the poster in its own voice: **SO BELOW**. Pressing it engraves a fun
 conspiracy fact about whatever is above: one downward pass of gold
 writing-light lifts the old letters away just ahead of landing the new
 ones — igniting as pure light, cooling into carved jade — with only a thin
@@ -18,6 +21,15 @@ one.
 
 *As above, so below* — the Emerald Tablet's own line. The SKY toggle
 literally chooses what is above.
+
+Every load opens with the world being born: the sun alone in the dark,
+flaring as the sea grows out of it ring by ring; the title arrives hairline
+and inks itself black; then the sky fires once on its own — the sea gulps,
+a ripple is born at the body, and the tablet condenses out of the light as
+the front rolls down — landing on the ring under your thumb, where the
+glass key materializes on the touchdown. Input goes live the moment the
+key exists. (Under reduced motion the whole opening is one quiet
+crossfade.)
 
 Everything breathes together: the tablet levitates — always plumb — while a
 specular gleam wanders its face, wave crests travel outward forever, and a

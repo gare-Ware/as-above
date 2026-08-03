@@ -16,6 +16,8 @@ const shot = (name) => page.screenshot({ path: `${out}/${name}.png` });
 
 await page.goto('http://localhost:3000/', { waitUntil: 'domcontentloaded' });
 await page.waitForSelector('main[data-ready="true"]', { timeout: 20_000 });
+// Reduced motion collapses the intro to one crossfade — 'done' lands fast.
+await page.waitForSelector('main[data-intro="done"]', { timeout: 20_000 });
 await page.waitForTimeout(1200);
 await shot('r1-idle');
 

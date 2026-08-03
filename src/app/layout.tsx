@@ -1,13 +1,20 @@
 import type { Metadata, Viewport } from 'next';
-import { Cinzel, Cutive_Mono } from 'next/font/google';
+import { Cutive_Mono, Fraunces } from 'next/font/google';
 import './globals.css';
 
-// Display voice: Cinzel — carved Roman capitals, the lapidary voice. Used for
-// the AS ABOVE wordmark ONLY. Exposed as the semantic --font-display hook:
-// to audition another face, swap the import + constructor here.
-const displayFont = Cinzel({
+// Display voice: Fraunces — the variable billboard face (wght 100–900 +
+// opsz), shared treatment with species-eval's headline and HATCH's masthead:
+// giant type that ENTERS THIN AND GROWS (the ink) on a near-critically-
+// damped spring. Used for the fullscreen AS ABOVE poster ONLY. opsz is
+// requested so the browser's optical sizing serves the display cut at
+// poster sizes; wght rides along automatically for a variable font.
+// (v3 used Cinzel for a wordmark that never rendered; the poster replaced
+// it.) Exposed as the semantic --font-display hook: to audition another
+// face, swap the import + constructor here.
+const displayFont = Fraunces({
   variable: '--font-display',
   subsets: ['latin'],
+  axes: ['opsz'],
 });
 
 // Tablet voice: Cutive Mono — a typewriter-serif monospace whose slab feet

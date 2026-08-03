@@ -1,10 +1,14 @@
 // Smoke suite for the whole devotional loop. Every spec waits on the app's
-// own ready signal ([data-ready="true"] on <main>) — never race the mount.
-// There is no readiness clock in AS ABOVE (every press answers instantly),
-// so no ?fast hook exists or is needed.
+// own signals ([data-ready="true"], then [data-intro="done"] on <main>) —
+// never race the mount OR the intro: input is gated until the key
+// materializes. There is no readiness clock beyond that (every press
+// answers instantly), so no ?fast hook exists or is needed.
 import { expect, test } from '@playwright/test';
 
-const ready = (page) => page.waitForSelector('main[data-ready="true"]', { timeout: 20_000 });
+const ready = async (page) => {
+  await page.waitForSelector('main[data-ready="true"]', { timeout: 20_000 });
+  await page.waitForSelector('main[data-intro="done"]', { timeout: 20_000 });
+};
 
 /** Fire the on-stage TRIGGER via pointer events (its press path). */
 async function pressTrigger(page) {
@@ -16,9 +20,76 @@ async function pressTrigger(page) {
 const settled = (page) =>
   page.waitForSelector('main[data-decode="settled"]', { timeout: 5_000 });
 
+test('the intro walks its beats in order and gates input until the key lands', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.waitForSelector('main[data-ready="true"]', { timeout: 20_000 });
+
+  // The word arrives while input is still the world's: a press mid-poster
+  // must not deal.
+  await page.waitForSelector('main[data-intro="poster"]', { timeout: 10_000 });
+  await page.keyboard.press('Enter');
+  await expect(page.locator('main')).toHaveAttribute('data-decode', 'idle');
+
+  // CSS-hidden is not interaction-hidden: the intro doors must also keep
+  // their controls unfocusable and block native keyboard activation. Use
+  // direct focus attempts so Next's dev indicator cannot perturb tab order.
+  await page.locator('.glass-key').evaluate((el) => el.focus());
+  await expect(page.locator('.glass-key')).not.toBeFocused();
+  await page.locator('.console-chip').evaluate((el) => el.focus());
+  await expect(page.locator('.console-chip')).not.toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('main')).toHaveAttribute('data-console', 'closed');
+
+  // The stone's birth fire, then the key's landing beat, then the open loop.
+  await page.waitForSelector('main[data-intro="tablet"]', { timeout: 10_000 });
+  await page.waitForSelector('main[data-intro="key"]', { timeout: 10_000 });
+  await page.locator('.glass-key').focus();
+  await expect(page.locator('.glass-key')).toBeFocused();
+  await page.waitForSelector('main[data-intro="done"]', { timeout: 10_000 });
+  await expect(page.locator('.poster')).toBeVisible();
+
+  await pressTrigger(page);
+  await settled(page);
+  expect((await page.locator('.fact-claim').textContent())?.trim().length).toBeGreaterThan(0);
+  // The poster is the permanent cover — still standing after the loop runs.
+  await expect(page.locator('.poster')).toBeVisible();
+});
+
+test('the intro clock pauses as one when animation frames are suspended', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForSelector('main[data-intro="poster"]', { timeout: 20_000 });
+
+  // Model a hidden page: let the already-scheduled frame finish, then hold
+  // the engine's next callback while real time keeps passing.
+  await page.evaluate(() => {
+    const nativeRaf = window.requestAnimationFrame.bind(window);
+    window.__introNativeRaf = nativeRaf;
+    window.__introRafPaused = true;
+    window.requestAnimationFrame = (callback) =>
+      nativeRaf((now) => {
+        if (window.__introRafPaused) window.__introQueuedRaf = callback;
+        else callback(now);
+      });
+  });
+  await page.waitForTimeout(3_000);
+  await expect(page.locator('main')).toHaveAttribute('data-intro', 'poster');
+
+  await page.evaluate(() => {
+    window.__introRafPaused = false;
+    const callback = window.__introQueuedRaf;
+    window.__introQueuedRaf = undefined;
+    if (callback) window.__introNativeRaf(callback);
+  });
+  await page.waitForSelector('main[data-intro="done"]', { timeout: 10_000 });
+});
+
 test('WebKit glass fallback never paints the duplicated live SVG', async ({ page }) => {
+  // The clear/lens finish stays fully wired behind ?key=glass — this spec
+  // guards ITS WebKit fallback, so it opts in explicitly.
   await page.setViewportSize({ width: 375, height: 720 });
-  await page.goto('/?lens=flat');
+  await page.goto('/?lens=flat&key=glass');
   await ready(page);
 
   const key = page.getByRole('button', { name: /trigger/i });
@@ -30,6 +101,18 @@ test('WebKit glass fallback never paints the duplicated live SVG', async ({ page
   // The fallback must be correct before the interaction that historically
   // forced WebKit to repaint the corrupt half-tile.
   await expect(key).toHaveAttribute('data-pressed', 'false');
+});
+
+test('the default finish is frost: a pane, never a window — no field copy', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await ready(page);
+  const key = page.getByRole('button', { name: /trigger/i });
+  await expect(key).toHaveAttribute('data-finish', 'frost');
+  await expect(key).toHaveAttribute('data-lens', 'flat');
+  await expect(key.locator('.key-scene')).toHaveCount(0);
+  await expect(key.locator('.key-grade')).toHaveCSS('opacity', '0');
 });
 
 test('TRIGGER reveals a fact; repeated presses cycle new ones with zero cooldown', async ({
@@ -171,6 +254,9 @@ test.describe('reduced motion', () => {
     await page.goto('/');
     await ready(page);
     await expect(page.locator('main')).toHaveAttribute('data-motion', 'still');
+    await expect(page.locator('.key-zone')).toHaveCSS('opacity', '1');
+    await expect(page.locator('.poster-line').first()).toHaveCSS('opacity', '1');
+    await expect(page.locator('.tablet-birth')).toHaveCSS('opacity', '1');
 
     // Decode becomes a crossfade — function fully preserved.
     await page.keyboard.press('Enter');
