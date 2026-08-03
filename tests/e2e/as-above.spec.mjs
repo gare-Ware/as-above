@@ -32,8 +32,21 @@ test('the intro walks its beats in order and gates input until the key lands', a
   await page.keyboard.press('Enter');
   await expect(page.locator('main')).toHaveAttribute('data-decode', 'idle');
 
+  // CSS-hidden is not interaction-hidden: the intro doors must also keep
+  // their controls unfocusable and block native keyboard activation. Use
+  // direct focus attempts so Next's dev indicator cannot perturb tab order.
+  await page.locator('.glass-key').evaluate((el) => el.focus());
+  await expect(page.locator('.glass-key')).not.toBeFocused();
+  await page.locator('.console-chip').evaluate((el) => el.focus());
+  await expect(page.locator('.console-chip')).not.toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('main')).toHaveAttribute('data-console', 'closed');
+
   // The stone's birth fire, then the key's landing beat, then the open loop.
   await page.waitForSelector('main[data-intro="tablet"]', { timeout: 10_000 });
+  await page.waitForSelector('main[data-intro="key"]', { timeout: 10_000 });
+  await page.locator('.glass-key').focus();
+  await expect(page.locator('.glass-key')).toBeFocused();
   await page.waitForSelector('main[data-intro="done"]', { timeout: 10_000 });
   await expect(page.locator('.poster')).toBeVisible();
 
@@ -42,6 +55,34 @@ test('the intro walks its beats in order and gates input until the key lands', a
   expect((await page.locator('.fact-claim').textContent())?.trim().length).toBeGreaterThan(0);
   // The poster is the permanent cover — still standing after the loop runs.
   await expect(page.locator('.poster')).toBeVisible();
+});
+
+test('the intro clock pauses as one when animation frames are suspended', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForSelector('main[data-intro="poster"]', { timeout: 20_000 });
+
+  // Model a hidden page: let the already-scheduled frame finish, then hold
+  // the engine's next callback while real time keeps passing.
+  await page.evaluate(() => {
+    const nativeRaf = window.requestAnimationFrame.bind(window);
+    window.__introNativeRaf = nativeRaf;
+    window.__introRafPaused = true;
+    window.requestAnimationFrame = (callback) =>
+      nativeRaf((now) => {
+        if (window.__introRafPaused) window.__introQueuedRaf = callback;
+        else callback(now);
+      });
+  });
+  await page.waitForTimeout(3_000);
+  await expect(page.locator('main')).toHaveAttribute('data-intro', 'poster');
+
+  await page.evaluate(() => {
+    window.__introRafPaused = false;
+    const callback = window.__introQueuedRaf;
+    window.__introQueuedRaf = undefined;
+    if (callback) window.__introNativeRaf(callback);
+  });
+  await page.waitForSelector('main[data-intro="done"]', { timeout: 10_000 });
 });
 
 test('WebKit glass fallback never paints the duplicated live SVG', async ({ page }) => {
@@ -213,6 +254,9 @@ test.describe('reduced motion', () => {
     await page.goto('/');
     await ready(page);
     await expect(page.locator('main')).toHaveAttribute('data-motion', 'still');
+    await expect(page.locator('.key-zone')).toHaveCSS('opacity', '1');
+    await expect(page.locator('.poster-line').first()).toHaveCSS('opacity', '1');
+    await expect(page.locator('.tablet-birth')).toHaveCSS('opacity', '1');
 
     // Decode becomes a crossfade — function fully preserved.
     await page.keyboard.press('Enter');

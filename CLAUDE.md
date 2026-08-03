@@ -108,8 +108,9 @@ continuous liquid motion through everything, all the time. The rules:
   oracle idle, intro beats — plus `TABLET.alive = false`, the one-line
   kill-switch (facts still deal; motion stops). The console's MOTION chip
   ANDs with it at runtime.
-- **The intro** (once per load; all beats slowMs'd/virtual-clock so SLOWMO
-  stretches the opening): the sun is there at first paint (fast 260ms
+- **The intro** (once per load; every phase is derived from the engine's
+  virtual clock, so SLOWMO stretches the opening and a hidden page pauses
+  every door with the rAF-owned choreography): the sun is there at first paint (fast 260ms
   stage fade) with `flare = 1` — the world's first breath is the birth
   flash — while the RINGS GROW OUT OF THE BODY (`ringBirthPose` in
   tablet.ts: pure, clamped, unit-tested — cubic ease-out from `fromU` under
@@ -126,8 +127,10 @@ continuous liquid motion through everything, all the time. The rules:
   the key's flash gotcha). `keyAtMs` ≈ the front's touchdown on the
   terminal ring — the key-zone door opens ON the thump (re-derive if gulp
   or pulse speed retunes) and INPUT GOES LIVE (`fire`/`toggleMode` no-op
-  while `data-intro` is pre-'key'; the hint clock starts at 'done').
-  Reduced/STILL: one quiet crossfade, `done` at `reducedDoneMs`.
+  while the live intro is pre-'key'; the key-zone is natively `inert` until
+  then, and the console stays `inert` until `done`). Reduced/STILL: every
+  quiet crossfade opens together at `key`, remains inert, and `done` rises
+  only after `reducedDoneMs` once the visible controls have settled.
 - **The ripple** originates at the body: `firePulse()` claims a pool slot,
   measures the TERMINAL ring (the ring radius NEAREST `.key-zone`'s center,
   mapped into wave-svg units once per fire — the key is fixed in the
@@ -231,13 +234,15 @@ continuous liquid motion through everything, all the time. The rules:
   token consumers (wave fills included). Reversible at any frame.
 - **Console**: HATCH's thumb-first drawer in liquid glass. On ≤640px the
   WHOLE stage slides up (the app is the drawer); desktop gets a rising
-  bottom bar. `inert` when closed. Keyboard: Enter/Space fire from anywhere
+  bottom bar. The whole console is `inert` until the intro is done; its panel
+  is also `inert` when closed. Keyboard: Enter/Space fire from anywhere
   (global handler defers to focused interactive elements), S flips the sky,
   Esc closes.
 - **data-\* signals on `<main>`** — the e2e/capture handover (never race the
   mount OR the intro): `data-ready`, `data-intro`
-  (waves/poster/tablet/key/done — input is gated until 'key'; specs and
-  peeks wait for 'done'), `data-mode`, `data-decode` (idle/decoding/settled),
+  (waves/poster/tablet/key/done — live input opens at 'key'; reduced/STILL
+  input waits for 'done'; specs and peeks wait for 'done'), `data-mode`,
+  `data-decode` (idle/decoding/settled),
   `data-console`, `data-motion`. `settled` is raised only once the words are
   actually on the glass — including the reduced-motion crossfade path.
 - **Reduced motion / STILL**: `inert = reduced || !motionLive || !alive` —
@@ -344,9 +349,10 @@ continuous liquid motion through everything, all the time. The rules:
   rAF-driven springs) FREEZE while beat timers would run on: pane
   screenshots of choreography show a torn, single-stepped world. Judge
   motion ONLY via the Playwright peek scripts (they schedule real frames).
-  Relatedly, the intro HOLDS until first `visibilitychange → visible`
-  (background-tab loads must not spend the opening unseen), and the engine
-  self-repairs ring opacity if the ring nodes remount after the birth.
+  The intro avoids that split: its phases and tablet release are both owned
+  by the virtual rAF clock, so it holds on initial background loads AND any
+  mid-opening hide. The engine also self-repairs ring opacity if the ring
+  nodes remount after the birth.
 - Interleaving `next build` and `next dev` on one `.next` corrupts
   `next/font` hashes (fonts silently fall back to system). Fix:
   `rm -rf .next`. Two dev servers on one `.next` can do the same.
